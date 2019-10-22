@@ -235,7 +235,9 @@ function ct_init () {
 
 	if ('serviceWorker' in navigator) {
 		window.addEventListener('load', function() {
-			navigator.serviceWorker.register('/sw.js').then(function(registration) {
+			var swPath = window.location.pathname;
+			swPath = swPath.substring(0, swPath.lastIndexOf('/')) + '/sw.js';
+			navigator.serviceWorker.register(swPath).then(function(registration) {
 				// Registration was successful
 				console.log('ServiceWorker registration successful with scope: ', registration.scope);
 			}, function(err) {
