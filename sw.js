@@ -40,8 +40,9 @@ self.addEventListener('fetch', function(event)
 						if (!response || response.status !== 200 || response.type !== 'basic')
 							return response;
 						if (response.url.startsWith("https://www.seneral.dev/FlagPlayerDev/favicon") ||
-							response.url.match(/https:\/\/i.ytimg.com\/vi\/[a-zA-Z0-9_-]{11}\/default\.jpg/)) 
+							response.url.match(/https:\/\/i.ytimg.com\/vi\/[a-zA-Z0-9_-]{11}\/default\.jpg/) != undefined) 
 						{
+							console.log('Adding ' + event.request.url + ' to cache!');
 							var cacheResponse = response.clone();
 							caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cacheResponse));
 						}
