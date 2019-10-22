@@ -40,8 +40,11 @@ self.addEventListener('fetch', function(event)
 						if (!response || response.status !== 200 || response.type !== 'basic')
 							return response;
 						if (response.url.startsWith("https://www.seneral.dev/FlagPlayerDev/favicon") ||
-							response.url.match(/https:\/\/i.ytimg.com\/vi\/[a-zA-Z0-9_-]{11}\/default\.jpg/))
-						caches.open(CACHE_NAME).then((cache) => cache.put(event.request, response.clone()));
+							response.url.match(/https:\/\/i.ytimg.com\/vi\/[a-zA-Z0-9_-]{11}\/default\.jpg/)) 
+						{
+							var cacheResponse = response.clone();
+							caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cacheResponse));
+						}
 
 						return response;
 					});
