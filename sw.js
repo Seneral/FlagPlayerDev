@@ -37,7 +37,7 @@ self.addEventListener('fetch', function(event)
 				return fetch(event.request).then(
 					function(response)
 					{
-						if (!response || response.status !== 200 || response.type == 'error') {
+						if (!response || (response.status !== 200 && response.status !== 0) || response.type == 'error') {
 							console.log("Discarding invalid response " + response + " with type " + response.type + " and status " + response.status);
 							return response;
 						}
