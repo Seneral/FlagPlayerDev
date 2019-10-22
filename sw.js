@@ -37,14 +37,19 @@ self.addEventListener('fetch', function(event)
 				return fetch(event.request).then(
 					function(response)
 					{
-						if (!response || response.status !== 200 || response.type == 'error')
+						if (!response || response.status !== 200 || response.type == 'error') {
+							console.log("Discarding invalid response " + response + " with type " + response.type + " and status " + response.status);
 							return response;
+						}
 						if (event.request.url.startsWith("https://www.seneral.dev/FlagPlayerDev/favicon") ||
 							event.request.url.match(/https:\/\/i.ytimg.com\/vi\/[a-zA-Z0-9_-]{11}\/default\.jpg/)) 
 						{
 							console.log('Adding ' + event.request.url + ' to cache!');
 							var cacheResponse = response.clone();
 							caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cacheResponse));
+						}
+						else {
+							console.log("Discarding url " + event.request.url);
 						}
 
 						return response;
