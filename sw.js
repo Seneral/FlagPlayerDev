@@ -37,10 +37,10 @@ self.addEventListener('fetch', function(event)
 				return fetch(event.request).then(
 					function(response)
 					{
-						if (!response || response.status !== 200 || response.type !== 'basic')
+						if (!response || response.status !== 200 || response.type == 'error')
 							return response;
-						if (response.url.startsWith("https://www.seneral.dev/FlagPlayerDev/favicon") ||
-							response.url.match(/https:\/\/i.ytimg.com\/vi\/[a-zA-Z0-9_-]{11}\/default\.jpg/) != undefined) 
+						if (event.request.url.startsWith("https://www.seneral.dev/FlagPlayerDev/favicon") ||
+							event.request.url.match(/https:\/\/i.ytimg.com\/vi\/[a-zA-Z0-9_-]{11}\/default\.jpg/)) 
 						{
 							console.log('Adding ' + event.request.url + ' to cache!');
 							var cacheResponse = response.clone();
