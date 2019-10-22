@@ -1,8 +1,11 @@
+var swPath = window.location.pathname;
+swPath = swPath.substring(0, swPath.lastIndexOf('/')) + '/sw.js';
+console.log('SW Path: ' + swPath);
 var CACHE_NAME = 'flagplayer-cache-1';
 var urlsToCache = [
-  '/style.css',
-  '/index.html',
-  '/page.js'
+  '/FlagPlayerDev/style.css',
+  '/FlagPlayerDev/index.html',
+  '/FlagPlayerDev/page.js'
 ];
 
 self.addEventListener('install', function(event) {
