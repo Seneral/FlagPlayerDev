@@ -1,7 +1,5 @@
 const CACHE_NAME =  "flagplayer-cache-1";
-const HOST = "https://www.seneral.dev";
-const PATH = "/FlagPlayerDev";
-var reMainPage = new RegExp(PATH.replace("/", "\\") + "(|\\/|\\/index\\.html)(\\?.*)?$")
+var reMainPage = new RegExp(/(|\/|\/index\.html)(\?.*)?$/);
 
 self.addEventListener('install', function(event)
 {
@@ -10,9 +8,9 @@ self.addEventListener('install', function(event)
 		.then(function(cache)
 		{
 			return cache.addAll([
-				PATH + '/style.css',
-				PATH + '/index.html',
-				PATH + '/page.js'
+				"./style.css",
+				"./index.html",
+				"./page.js"
 			]);
 		})
 	);
@@ -20,8 +18,9 @@ self.addEventListener('install', function(event)
 
 self.addEventListener('fetch', function(event)
 {
-	if (event.request.url.match(reMainPage))
-		event.respondWith(caches.match(PATH + "/index.html"));
+	var url = event.request.url;
+	if (url.match(reMainPage))
+		event.respondWith(caches.match("./index.html"));
 	else
 	{
 		event.respondWith(
@@ -35,8 +34,8 @@ self.addEventListener('fetch', function(event)
 					{
 						if (!response || (response.status !== 200 && response.status !== 0) || response.type == 'error')
 							return response;
-						if (event.request.url.startsWith(HOST + PATH + "/favicon") ||
-							event.request.url.match(/https:\/\/i.ytimg.com\/vi\/[a-zA-Z0-9_-]{11}\/default\.jpg/)) 
+						if (url.includes ("/favicon") ||
+							url.match(/https:\/\/i.ytimg.com\/vi\/[a-zA-Z0-9_-]{11}\/default\.jpg/)) 
 						{
 							var cacheResponse = response.clone();
 							caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cacheResponse));
