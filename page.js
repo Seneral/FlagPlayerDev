@@ -245,6 +245,7 @@ function sw_install () {
 					}
 					else {
 						console.log("No existing SW!");
+						setDisplay("newVersionPanel", "block");
 					}
 				};
 				if (registration.installing) {
