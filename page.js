@@ -241,11 +241,11 @@ function sw_install () {
 					console.log("Installed sw " + sw_updated);
 					if (navigator.serviceWorker.controller) {
 						console.log("Update available!");
-						setDisplay("newVersionPanel", "block");
+						setDisplay("newVersionPanel", "");
 					}
 					else {
 						console.log("No existing SW!");
-						setDisplay("newVersionPanel", "block");
+						setDisplay("newVersionPanel", "");
 					}
 				};
 				var installing = registration.installing;
