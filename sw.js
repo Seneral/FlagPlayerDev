@@ -8,7 +8,7 @@ var dbPromises = [];
 
 function db_access () {
 	return new Promise (function (accept, reject) {
-		if (!('indexedDB' in window)) {
+		if (!indexedDB) {
 			reject();
 			return;
 		}
