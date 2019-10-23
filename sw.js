@@ -27,10 +27,10 @@ function db_access () {
 		};
 		request.onsuccess = function (e) { // Ready
 			database = e.target.result;
-			db_database.onerror = function (e) { // Setup database-wide error handling
+			database.onerror = function (e) { // Setup database-wide error handling
 				console.error("Database Error:", e);
 			};
-			db_database.onclose = function (e) { // Setup database-wide error handling
+			database.onclose = function (e) { // Setup database-wide error handling
 				console.error("Database Closed Unexpectedly!", e);
 				database = undefined;
 			};
