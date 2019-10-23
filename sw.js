@@ -44,7 +44,7 @@ function db_access () {
 function db_hasVideo (videoID) {
 	return new Promise (function (accept, reject) {
 		db_access().then (function (db) {
-			var videoTransaction = db.transaction("videos", "read");
+			var videoTransaction = db.transaction("videos", "readonly");
 			var videoStore = videoTransaction.objectStore("videos");
 			var videoRequest = videoStore.get(videoID);
 			videoRequest.onsuccess = function (e) {
