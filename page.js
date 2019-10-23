@@ -236,7 +236,7 @@ function sw_install () {
 		navigator.serviceWorker.register("./sw.js").then(function(registration) {
 
 			registration.onupdatefound = function () {
-				sw_updated = registration.installing;
+				sw_updated = registration.active || registration.installing;
 				sw_updated.onstatechange = function () {
 					if (sw_updated.state == "installed") {
 						console.log("Installed sw " + sw_updated);
@@ -252,7 +252,7 @@ function sw_install () {
 			};
 
 			sw_current = navigator.serviceWorker.controller;
-			if (!sw_current) sw_updated = registration.installing;
+			if (!sw_current) sw_updated = registration.active || registration.installing;
 			else {
 				console.log("Found current SW!");
 			}
