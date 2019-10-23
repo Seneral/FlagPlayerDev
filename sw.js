@@ -48,6 +48,7 @@ function db_hasVideo (videoID) {
 			var videoStore = videoTransaction.objectStore("videos");
 			var videoRequest = videoStore.get(videoID);
 			videoRequest.onsuccess = function (e) {
+				console.warn("Found " + videoID + ":", e);
 				accept();
 			};
 			videoRequest.onerror = function (e) {
