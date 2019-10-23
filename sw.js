@@ -34,6 +34,7 @@ function db_access () {
 				console.error("Database Closed Unexpectedly!", e);
 				database = undefined;
 			};
+			console.log("Opened Database!");
 			dbLoading = false;
 			dbPromises.forEach((acc) => acc(database));
 			dbPromises = [];
@@ -47,13 +48,16 @@ function db_hasVideo (videoID) {
 			var videoStore = videoTransaction.objectStore("videos");
 			var videoRequest = videoStore.get(videoID);
 			videoRequest.onsuccess = function (e) {
+				console.log("Request " + videoID + " Success:", e);
 				accept();
 			};
 			videoRequest.onerror = function (e) {
+				console.warn("Request " + videoID + " Error:", e);
 				reject();
 			};
 			
-		}).catch (function () {
+		}).catch (function (e) {
+			console.error("DB open error:", e);
 			reject();
 		});
 	});
