@@ -48,7 +48,6 @@ function db_hasVideo (videoID) {
 			var videoStore = videoTransaction.objectStore("videos");
 			var videoRequest = videoStore.get(videoID);
 			videoRequest.onsuccess = function (e) {
-				console.log("Request " + videoID + " Success:", e);
 				accept();
 			};
 			videoRequest.onerror = function (e) {
@@ -96,20 +95,22 @@ self.addEventListener('fetch', function(event)
 					{
 						if (!response || (response.status !== 200 && response.status !== 0) || response.type == 'error')
 							return response;
-						
-						var cache = function () {
+
+						if (url.startsWith(BASE + "/favicon")) {
 							var cacheResponse = response.clone();
 							caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cacheResponse));
-						};
-						if (url.startsWith(BASE + "/favicon")) cache();
-						var match = url.match(/https:\/\/i.ytimg.com\/vi\/([a-zA-Z0-9_-]{11})\/default\.jpg/);
-						if (match) {
-							db_hasVideo(match[1]).then(function () {
-								console.log("Caching id " + match[1]);
-								cache();
-							}).catch(function () {
-								console.log("Not caching id " + match[1]);
-							});
+						}
+						else {
+							var match = url.match(/https:\/\/i.ytimg.com\/vi\/([a-zA-Z0-9_-]{11})\/default\.jpg/);
+							if (match) {
+								var cacheResponse = response.clone();
+								db_hasVideo(match[1]).then(function () {
+									console.log("Caching id " + match[1]);
+									caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cacheResponse));
+								}).catch(function (e) {
+									console.log("Not caching id " + match[1]);
+								});
+							}
 						}
 						return response;
 					});
