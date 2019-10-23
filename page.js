@@ -226,6 +226,13 @@ const HOST_CORS = "https://flagplayer-cors.herokuapp.com/"; // Default value onl
 function sw_install () { 
 	// Setup service worker for caching control
 	if ('serviceWorker' in navigator) {
+
+		navigator.serviceWorker.oncontrollerchange = function () {
+			if (sw_refreshing) return;
+			window.location.reload();
+			sw_refreshing = true;
+		};
+
 		navigator.serviceWorker.register("./sw.js").then(function(registration) {
 
 			registration.onupdatefound = function () {
@@ -234,6 +241,7 @@ function sw_install () {
 					if (sw_updated.state == "installed") {
 						console.log("Installed sw " + sw_updated);
 						if (navigator.serviceWorker.controller) {
+							console.log("Update available!");
 							setDisplay("newVersionPanel", "block");
 						}
 						else {
@@ -249,12 +257,6 @@ function sw_install () {
 				console.log("Found current SW!");
 			}
 
-			navigator.serviceWorker.oncontrollerchange = function () {
-				if (sw_refreshing) return;
-				window.location.reload();
-				sw_refreshing = true;
-			};
-
 			console.log("Successfully installed service worker: Caching and Offline Mode are available!");
 		}, function(e) {
 			console.warn("Failed to install service worker: Caching and Offline Mode will be unavailable!");
@@ -262,7 +264,8 @@ function sw_install () {
 	}
 }
 function sw_update () { 
-	sw_updated.postMessage({ action: 'skipWaiting' }); 
+	sw_updated.postMessage({ action: 'skipWaiting' });
+	setDisplay("newVersionPanel", "none");
 }
 
 

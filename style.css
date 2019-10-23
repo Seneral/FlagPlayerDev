@@ -1036,7 +1036,7 @@ button {
 	color: var(--txt-sec-color);
 }
 .popupPanel {
-	display: none;
+	display: none !important;
 }
 .blurred {
 	filter: blur(4px);

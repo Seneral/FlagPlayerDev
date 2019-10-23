@@ -53,10 +53,14 @@ self.addEventListener('install', function(event) {
 		})
 	);
 });
+self.addEventListener('activate', function(event) {
+	console.log("SW activated!");
+});
 
 self.addEventListener('message', function(event) {
 	if (event.data.action === 'skipWaiting') {
 		self.skipWaiting();
+		console.log("Taking over!");
 	}
 });
 
