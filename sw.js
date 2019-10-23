@@ -1,5 +1,6 @@
 const CACHE_NAME =  "flagplayer-cache-1";
-var reMainPage = new RegExp(/(|\/|\/index\.html)(\?.*)?$/);
+const BASE = "https://www.seneral.dev/FlagPlayerDev";
+var reMainPage = new RegExp(BASE.replace("/", "\\") + "(|\\/|\\/index\\.html)(\\?.*)?$")
 
 self.addEventListener('install', function(event)
 {
@@ -34,7 +35,7 @@ self.addEventListener('fetch', function(event)
 					{
 						if (!response || (response.status !== 200 && response.status !== 0) || response.type == 'error')
 							return response;
-						if (url.includes ("/favicon") ||
+						if (url.startsWith(BASE + "/favicon") ||
 							url.match(/https:\/\/i.ytimg.com\/vi\/[a-zA-Z0-9_-]{11}\/default\.jpg/)) 
 						{
 							var cacheResponse = response.clone();
