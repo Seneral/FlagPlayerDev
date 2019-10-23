@@ -127,6 +127,11 @@ var timelineBuffered = I("tlBuffered");
 /* ---- VARIABLES -----	*/
 /* -------------------- */
 
+/* SERVICE WORKER */
+var sw_current;
+var sw_updated;
+var sw_refreshing;
+
 /* DATABASE */
 var db_database;
 var db_loading = false;
@@ -215,6 +220,53 @@ const HOST_CORS = "https://flagplayer-cors.herokuapp.com/"; // Default value onl
 //endregion
 
 /* -------------------------------------------------------------------------------------------------------------- */
+/* ----------------- SERVICE WORKER ----------------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------------------------------------------- */
+
+function sw_install () { 
+	// Setup service worker for caching control
+	if ('serviceWorker' in navigator) {
+		navigator.serviceWorker.register("./sw.js").then(function(registration) {
+
+			registration.onupdatefound = function () {
+				sw_updated = registration.installing;
+				sw_updated.onstatechange = function () {
+					if (sw_updated.state == "installed") {
+						console.log("Installed sw " + sw_updated);
+						if (navigator.serviceWorker.controller) {
+							setDisplay("newVersionPanel", "block");
+						}
+						else {
+							console.log("No existing SW!");
+						}
+					}
+				};
+			};
+
+			sw_current = navigator.serviceWorker.controller;
+			if (!sw_current) sw_updated = registration.installing;
+			else {
+				console.log("Found current SW!");
+			}
+
+			navigator.serviceWorker.oncontrollerchange = function () {
+				if (sw_refreshing) return;
+				window.location.reload();
+				sw_refreshing = true;
+			};
+
+			console.log("Successfully installed service worker: Caching and Offline Mode are available!");
+		}, function(e) {
+			console.warn("Failed to install service worker: Caching and Offline Mode will be unavailable!");
+		});
+	}
+}
+function sw_update () { 
+	sw_updated.postMessage({ action: 'skipWaiting' }); 
+}
+
+
+/* -------------------------------------------------------------------------------------------------------------- */
 /* ----------------- CONTROL FUNCTIONS -------------------------------------------------------------------------- */
 /* -------------------------------------------------------------------------------------------------------------- */
 //region
@@ -232,21 +284,7 @@ function ct_init () {
 	ui_setupEventHandlers();
 	ct_readParameters();
 	ct_loadContent();
-
-	// Setup service worker for caching control
-	if ('serviceWorker' in navigator) {
-		window.addEventListener('load', function() {
-			var swPath = window.location.pathname;
-			swPath = swPath.substring(0, swPath.lastIndexOf('/')) + '/sw.js';
-			navigator.serviceWorker.register(swPath).then(function(registration) {
-				// Registration was successful
-				console.log('ServiceWorker registration successful with scope: ', registration.scope);
-			}, function(err) {
-				// registration failed :(
-				console.log('ServiceWorker registration failed: ', err);
-			});
-		});
-	}
+	sw_install();
 }
 
 
@@ -2676,6 +2714,7 @@ function ui_setPlaylistPosition() {
 	videoContainer.scrollTop = Math.max(0, videoContainer.scrollHeight * ct_getVideoPlIndex() / videoContainer.childElementCount - 40);
 }
 function ui_checkPlaylist () {
+	if (!yt_playlist) return; // Unloaded
 	var container = I("plVideos");
 	ui_adaptiveListLoad(container, yt_playlist.videos.length, function (index) {
 		var video = yt_playlist.videos[index];
@@ -3089,6 +3128,9 @@ function ui_setupEventHandlers () {
 	I("search_categories").onchange = onSearchUpdate;
 	onToggleButton(I("search_hideCompletely"), onSearchUpdate);
 	I("searchContextActions").onchange = onSelectContextAction;
+	// Update Notification
+	I("newVersionUpdate").onclick = sw_update;
+	I("newVersionClose").onclick = function () { setDisplay("newVersionPanel", "none")};
 	
 }
 

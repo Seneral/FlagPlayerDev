@@ -1033,6 +1033,7 @@ button {
 	font: inherit;
 	background: none;
 	cursor: pointer;
+	color: var(--txt-sec-color);
 }
 .popupPanel {
 	display: none;
@@ -1066,6 +1067,30 @@ button {
 }
 
 
+/* --------------------------- */
+/* ---- NOTIFICATIONS -------- */
+/* --------------------------- */
+
+.notificationPanel {
+	z-index: 9;
+	position: fixed;
+	bottom: 0;
+	right: 0;
+	width: 100%;
+	max-width: 30em;
+	max-width: fit-content;
+	display: flex;
+	line-height: 2em;
+	padding: 0.5em 1em;
+	margin: 1em;
+	border: 1px solid var(--bg-sec-acc-color);
+	background-color: var(--bg-sec-color);
+}
+.notificationDismiss {
+	margin-left: 2em;
+	height: 1em;
+	width: 2em; 
+}
 
 /* --------------------------- */
 /* ---- TEXT LABELS ---------- */

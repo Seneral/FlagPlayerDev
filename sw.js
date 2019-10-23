@@ -1,72 +1,50 @@
-const CACHE_NAME =  "flagplayer-cache-1";
+const CACHE_NAME = "flagplayer-cache-1";
 const BASE = "https://www.seneral.dev/FlagPlayerDev";
 var reMainPage = new RegExp(BASE.replace("/", "\\") + "(|\\/|\\/index\\.html)(\\?.*)?$")
 var database;
 var dbLoading = false;
 var dbPromises = [];
 
-
-function db_access () {
-	return new Promise (function (accept, reject) {
-		if (!indexedDB) {
-			reject();
-			return;
-		}
-		if (database != undefined) {
-			accept(database);
-			return;
-		}
-		// Only start one request at a time
-		dbPromises.push(accept);
-		if (dbLoading) return;
-		dbLoading = true;
-		// Start request
-		var request = indexedDB.open("ContentDatabase", 1);
-		request.onerror = function (e) { // Denied
-			console.error("Failed to open Database!", e);
-		};
-		request.onsuccess = function (e) { // Ready
-			database = e.target.result;
-			database.onerror = function (e) { // Setup database-wide error handling
-				console.error("Database Error:", e);
+// Database access - minimal, no error handling, since it's only readonly and assumes a working database management on the main site
+function db_access() {
+	return new Promise(function(accept, reject) {
+		if (!indexedDB) reject();
+		else if (database) accept(database);
+		else {
+			dbPromises.push(accept);
+			if (dbLoading) return;
+			dbLoading = true;
+			// Open
+			var request = indexedDB.open("ContentDatabase");
+			request.onerror = reject;
+			request.onsuccess = function(e) { // Ready
+				database = e.target.result;
+				database.onerror = reject;
+				database.onclose = () => database = undefined;
+				dbLoading = false;
+				dbPromises.forEach((acc) => acc(database));
+				dbPromises = [];
 			};
-			database.onclose = function (e) { // Setup database-wide error handling
-				console.error("Database Closed Unexpectedly!", e);
-				database = undefined;
-			};
-			console.log("Opened Database!");
-			dbLoading = false;
-			dbPromises.forEach((acc) => acc(database));
-			dbPromises = [];
-		};
+		}
 	});
 }
-function db_hasVideo (videoID) {
-	return new Promise (function (accept, reject) {
-		db_access().then (function (db) {
-			var videoTransaction = db.transaction("videos", "readonly");
-			var videoStore = videoTransaction.objectStore("videos");
-			var videoRequest = videoStore.get(videoID);
-			videoRequest.onsuccess = function (e) {
+function db_hasVideo(videoID) {
+	return new Promise(function(accept, reject) {
+		db_access().then(function(db) {
+			var request = db.transaction("videos", "readonly").objectStore("videos").get(videoID);
+			request.onerror = reject;
+			request.onsuccess = function(e) {
 				if (e.target.result) accept();
 				else reject();
 			};
-			videoRequest.onerror = function (e) {
-				reject();
-			};
-			
-		}).catch (function (e) {
-			reject();
-		});
+		}).catch(reject);
 	});
 }
 
-self.addEventListener('install', function(event)
-{
+self.addEventListener('install', function(event) {
 	event.waitUntil(
 		caches.open(CACHE_NAME)
-		.then(function(cache)
-		{
+		.then(function(cache) {
 			return cache.addAll([
 				"./style.css",
 				"./index.html",
@@ -76,43 +54,41 @@ self.addEventListener('install', function(event)
 	);
 });
 
-self.addEventListener('fetch', function(event)
-{
+self.addEventListener('message', function(event) {
+	if (event.data.action === 'skipWaiting') {
+		self.skipWaiting();
+	}
+});
+
+self.addEventListener('fetch', function(event) {
 	var url = event.request.url;
-	if (url.match(reMainPage))
+	if (url.match(reMainPage)) // Always use cached app html
 		event.respondWith(caches.match("./index.html"));
-	else
-	{
+	else {
 		event.respondWith(
 			caches.match(event.request)
-			.then(function(response)
-			{
+			.then(function(response) {
 				if (response)
 					return response;
-				return fetch(event.request).then(
-					function(response)
-					{
-						if (!response || (response.status !== 200 && response.status !== 0) || response.type == 'error')
-							return response;
-
-						if (url.startsWith(BASE + "/favicon")) {
-							var cacheResponse = response.clone();
-							caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cacheResponse));
-						}
-						else {
-							var match = url.match(/https:\/\/i.ytimg.com\/vi\/([a-zA-Z0-9_-]{11})\/default\.jpg/);
-							if (match) {
-								var cacheResponse = response.clone();
-								db_hasVideo(match[1]).then(function () {
-									console.log("Caching id " + match[1]);
-									caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cacheResponse));
-								}).catch(function (e) {
-									console.log("Not caching id " + match[1]);
-								});
-							}
-						}
+				return fetch(event.request).then(function(response) {
+					if (!response || (response.status !== 200 && response.status !== 0) || response.type == 'error')
 						return response;
-					});
+
+					if (url.startsWith(BASE + "/favicon")) {
+						var cacheResponse = response.clone();
+						caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cacheResponse));
+					}
+					else {
+						var match = url.match(/https:\/\/i.ytimg.com\/vi\/([a-zA-Z0-9_-]{11})\/default\.jpg/);
+						if (match) {
+							var cacheResponse = response.clone();
+							db_hasVideo(match[1]).then(function() { // Cache
+								caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cacheResponse));
+							});
+						}
+					}
+					return response;
+				});
 			})
 		);
 	}
