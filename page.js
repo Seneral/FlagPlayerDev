@@ -248,9 +248,10 @@ function sw_install () {
 						setDisplay("newVersionPanel", "block");
 					}
 				};
-				if (registration.installing) {
-					sw_updated.onstatechange = function () {
-						if (sw_updated.state == "installed" || sw_updated.state == "active") {
+				var installing = registration.installing;
+				if (installing) {
+					installing.onstatechange = function () {
+						if (installing.state == "installed" || installing.state == "active") {
 							update();
 						}
 					};
