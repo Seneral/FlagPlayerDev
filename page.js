@@ -233,6 +233,7 @@ function ct_init () {
 	ct_readParameters();
 	ct_loadContent();
 
+	// Setup service worker for caching control
 	if ('serviceWorker' in navigator) {
 		window.addEventListener('load', function() {
 			var swPath = window.location.pathname;
@@ -777,7 +778,7 @@ function db_access (callback) {
 	if (db_loading) return;
 	db_loading = true;
 	// Start request
-	var request = indexedDB.open("ContentDatabase");
+	var request = indexedDB.open("ContentDatabase", 1);
 	request.onerror = function (e) { // Denied
 		console.error("Failed to open Database!", e);
 	};
