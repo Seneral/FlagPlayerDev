@@ -1,4 +1,4 @@
-var CACHE_NAME = "flagplayer-cache-1";
+var CACHE_NAME = "flagplayer-cache-2";
 var BASE = location.href.substring(0, location.href.lastIndexOf("/"));
 var reMainPage = new RegExp(BASE.replace("/", "\\/") + "(|\\/|\\/index\\.html)(\\?.*)?$")
 var database;
@@ -95,7 +95,7 @@ self.addEventListener('fetch', function(event) {
 							db_hasVideo(match[1]).then(function() { // Video stored, cache thumbnail
 								caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cacheResponse));
 							}).catch(function () {
-								
+
 							});
 						}
 					}
