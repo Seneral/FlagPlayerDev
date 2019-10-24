@@ -227,18 +227,18 @@ function sw_install () {
 	// Setup service worker for caching control
 	if ("serviceWorker" in navigator) {
 
-		navigator.serviceWorker.addEventListener("controllerchange", function () {
+		navigator.serviceWorker.oncontrollerchange = function () {
 			console.log("Detected activating of new SW - reloading");
 			if (sw_refreshing) return;
 			window.location.reload();
 			sw_refreshing = true;
-		});
+		};
 
 		navigator.serviceWorker.register("./sw.js").then(function(registration) {
 
 			registration.onupdatefound = function () {
 				var update = function () {
-					sw_updated = registration.active || registration.waiting;
+					sw_updated = registration.waiting;
 					console.log("Installed updated sw " + sw_updated + " (" + sw_updated.state + ")");
 					console.log(sw_updated);
 					if (navigator.serviceWorker.controller) {
