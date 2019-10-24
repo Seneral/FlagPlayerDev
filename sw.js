@@ -1,6 +1,5 @@
-const VERSION = "0.4";
-const CACHE_NAME = "flagplayer-cache-1";
-const BASE = "https://www.seneral.dev/FlagPlayerDev";
+var CACHE_NAME = "flagplayer-cache-1";
+var BASE = location.href.substring(0, location.href.lastIndexOf("/"));
 var reMainPage = new RegExp(BASE.replace("/", "\\") + "(|\\/|\\/index\\.html)(\\?.*)?$")
 var database;
 var dbLoading = false;
@@ -29,6 +28,7 @@ function db_access() {
 		}
 	});
 }
+
 function db_hasVideo(videoID) {
 	return new Promise(function(accept, reject) {
 		db_access().then(function(db) {
@@ -43,7 +43,6 @@ function db_hasVideo(videoID) {
 }
 
 self.addEventListener('install', function(event) {
-	console.log("SW installing...");
 	event.waitUntil(
 		caches.open(CACHE_NAME)
 		.then(function(cache) {
@@ -56,15 +55,18 @@ self.addEventListener('install', function(event) {
 	);
 });
 self.addEventListener('activate', function(event) {
-	console.log("SW activated!");
+	event.waitUntil(
+		caches.keys().then(keys => Promise.all(
+			keys.map(key => {
+				if (key.startsWith("flagplayer-cache-") && key != CACHE_NAME)
+					return caches.delete(key);
+			})
+		))
+	);
 });
 
 self.addEventListener('message', function(event) {
-	if (event.data.action === 'skipWaiting') {
-		console.log("SkipWaiting - before " + self.state + "!");
-		self.skipWaiting();
-		console.log("SkipWaiting - after " + self.state + "!");
-	}
+	if (event.data.action === 'skipWaiting') self.skipWaiting();
 });
 
 self.addEventListener('fetch', function(event) {
@@ -75,12 +77,13 @@ self.addEventListener('fetch', function(event) {
 		event.respondWith(
 			caches.match(event.request)
 			.then(function(response) {
-				if (response)
-					return response;
+				// From cache
+				if (response) return response;
+				// Fetch from net
 				return fetch(event.request).then(function(response) {
 					if (!response || (response.status !== 200 && response.status !== 0) || response.type == 'error')
 						return response;
-
+					// Cache if desired
 					if (url.startsWith(BASE + "/favicon")) {
 						var cacheResponse = response.clone();
 						caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cacheResponse));
@@ -89,7 +92,7 @@ self.addEventListener('fetch', function(event) {
 						var match = url.match(/https:\/\/i.ytimg.com\/vi\/([a-zA-Z0-9_-]{11})\/default\.jpg/);
 						if (match) {
 							var cacheResponse = response.clone();
-							db_hasVideo(match[1]).then(function() { // Cache
+							db_hasVideo(match[1]).then(function() { // Video stored, cache thumbnail
 								caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cacheResponse));
 							});
 						}
