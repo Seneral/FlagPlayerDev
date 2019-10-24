@@ -238,15 +238,14 @@ function sw_install () {
 			sw_current = navigator.serviceWorker.controller;
 			if (sw_current) console.log("Successfully installed service worker: Caching and Offline Mode are available!");
 			else console.log("Successfully installed service worker: Caching and Offline Mode are available after reload!");
-			// Check for updates or initial installation
+			// Check for updates
 			registration.onupdatefound = function () {
+				if (!navigator.serviceWorker.controller) 
+					return; // not an update, but initial installation
 				console.log("Found new service worker version!");
 				var update = function () {
 					sw_updated = registration.waiting || registration.active;
-					if (navigator.serviceWorker.controller) 
-						setDisplay("newVersionPanel", "");
-					else 
-						setDisplay("newVersionPanel", "");
+					setDisplay("newVersionPanel", "");
 					console.log("New service worker version ready for activation!");
 				};
 				var installing = registration.installing;
