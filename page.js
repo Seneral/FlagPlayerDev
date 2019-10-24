@@ -238,7 +238,7 @@ function sw_install () {
 
 			registration.onupdatefound = function () {
 				var update = function () {
-					sw_updated = registration.waiting;
+					sw_updated = registration.waiting || registration.active;
 					console.log("Installed updated sw " + sw_updated + " (" + sw_updated.state + ")");
 					console.log(sw_updated);
 					if (navigator.serviceWorker.controller) {
