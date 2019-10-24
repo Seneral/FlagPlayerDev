@@ -240,6 +240,7 @@ function sw_install () {
 				var update = function () {
 					sw_updated = registration.active || registration.waiting;
 					console.log("Installed updated sw " + sw_updated + " (" + sw_updated.state + ")");
+					console.log(sw_updated);
 					if (navigator.serviceWorker.controller) {
 						console.log("Update available!");
 						setDisplay("newVersionPanel", "");
@@ -249,6 +250,7 @@ function sw_install () {
 						setDisplay("newVersionPanel", "");
 					}
 				};
+				console.log(sw_updated);
 				var installing = registration.installing;
 				if (installing) {
 					installing.onstatechange = function () {
@@ -266,6 +268,7 @@ function sw_install () {
 			sw_current = navigator.serviceWorker.controller;
 			if (sw_current) {
 				console.log("Successfully installed service worker: Caching and Offline Mode are available!");
+				console.log(sw_current);
 				sw_current.onstatechange = function () {
 					console.log("Current SW state change to " + installing.state);
 				}
