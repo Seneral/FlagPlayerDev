@@ -239,7 +239,7 @@ function sw_install () {
 			registration.onupdatefound = function () {
 				var update = function () {
 					sw_updated = registration.active || registration.waiting;
-					console.log("Installed updated sw " + sw_updated);
+					console.log("Installed updated sw " + sw_updated + " (" + sw_updated.state + ")");
 					if (navigator.serviceWorker.controller) {
 						console.log("Update available!");
 						setDisplay("newVersionPanel", "");
@@ -258,7 +258,7 @@ function sw_install () {
 					};
 				}
 				else {
-					console.log("Updating SW already installed: " + installing.state);
+					console.log("Updating SW already installed!");
 					update();
 				} 
 			};
