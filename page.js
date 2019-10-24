@@ -278,7 +278,7 @@ function sw_install () {
 	}
 }
 function sw_update () { 
-	console.log("Sending skipWaiting to sw_updated (" + sw_updated.state + ") - current: sw_current (" + sw_current.state + ")");
+	console.log("Sending skipWaiting to sw_updated (" + (sw_updated? sw_updated.state : "None") + ") - current: sw_current (" + (sw_current? sw_current.state : "None") + ")");
 	sw_updated.postMessage({ action: "skipWaiting" });
 	setDisplay("newVersionPanel", "none");
 }
