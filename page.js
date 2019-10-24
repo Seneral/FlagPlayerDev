@@ -227,7 +227,7 @@ function sw_install () {
 	// Setup service worker for caching control
 	if ("serviceWorker" in navigator) {
 
-		navigator.serviceWorker.addEventListener("controllerchange", = function () {
+		navigator.serviceWorker.addEventListener("controllerchange", function () {
 			console.log("Detected activating of new SW - reloading");
 			if (sw_refreshing) return;
 			window.location.reload();
