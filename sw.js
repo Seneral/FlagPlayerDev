@@ -43,6 +43,7 @@ function db_hasVideo(videoID) {
 }
 
 self.addEventListener('install', function(event) {
+	console.log("SW installing...");
 	event.waitUntil(
 		caches.open(CACHE_NAME)
 		.then(function(cache) {
@@ -60,8 +61,9 @@ self.addEventListener('activate', function(event) {
 
 self.addEventListener('message', function(event) {
 	if (event.data.action === 'skipWaiting') {
+		console.log("SkipWaiting - before " + self.state + "!");
 		self.skipWaiting();
-		console.log("Taking over!");
+		console.log("SkipWaiting - after " + self.state + "!");
 	}
 });
 

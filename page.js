@@ -232,7 +232,7 @@ function sw_install () {
 			if (sw_refreshing) return;
 			window.location.reload();
 			sw_refreshing = true;
-		};
+		});
 
 		navigator.serviceWorker.register("./sw.js").then(function(registration) {
 
