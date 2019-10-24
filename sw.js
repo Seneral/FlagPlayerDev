@@ -94,6 +94,8 @@ self.addEventListener('fetch', function(event) {
 							var cacheResponse = response.clone();
 							db_hasVideo(match[1]).then(function() { // Video stored, cache thumbnail
 								caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cacheResponse));
+							}).catch(function () {
+								
 							});
 						}
 					}
