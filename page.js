@@ -225,9 +225,9 @@ const HOST_CORS = "https://flagplayer-cors.herokuapp.com/"; // Default value onl
 
 function sw_install () { 
 	// Setup service worker for caching control
-	if ('serviceWorker' in navigator) {
+	if ("serviceWorker" in navigator) {
 
-		navigator.serviceWorker.oncontrollerchange = function () {
+		navigator.serviceWorker.addEventListener("controllerchange", = function () {
 			console.log("Detected activating of new SW - reloading");
 			if (sw_refreshing) return;
 			window.location.reload();
@@ -238,8 +238,8 @@ function sw_install () {
 
 			registration.onupdatefound = function () {
 				var update = function () {
-					sw_updated = registration.active || registration.installed;
-					console.log("Installed sw " + sw_updated);
+					sw_updated = registration.active || registration.waiting;
+					console.log("Installed updated sw " + sw_updated);
 					if (navigator.serviceWorker.controller) {
 						console.log("Update available!");
 						setDisplay("newVersionPanel", "");
@@ -252,13 +252,15 @@ function sw_install () {
 				var installing = registration.installing;
 				if (installing) {
 					installing.onstatechange = function () {
-						if (installing.state == "installed" || installing.state == "active") 
+						console.log("Installing SW state change to " + installing.state);
+						if (installing.state == "waiting" || installing.state == "active") 
 							update();
-						else 
-							console.log("Installing SW state change to " + installing.state);
 					};
 				}
-				else update();
+				else {
+					console.log("Updating SW already installed: " + installing.state);
+					update();
+				} 
 			};
 
 			sw_current = navigator.serviceWorker.controller;
@@ -276,8 +278,8 @@ function sw_install () {
 	}
 }
 function sw_update () { 
-	console.log("Sending skipWaiting to " + sw_updated + " - current: " + sw_current);
-	sw_updated.postMessage({ action: 'skipWaiting' });
+	console.log("Sending skipWaiting to sw_updated (" + sw_updated.state + ") - current: sw_current (" + sw_current.state + ")");
+	sw_updated.postMessage({ action: "skipWaiting" });
 	setDisplay("newVersionPanel", "none");
 }
 
