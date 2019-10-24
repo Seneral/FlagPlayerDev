@@ -1,6 +1,6 @@
 var CACHE_NAME = "flagplayer-cache-1";
 var BASE = location.href.substring(0, location.href.lastIndexOf("/"));
-var reMainPage = new RegExp(BASE.replace("/", "\\") + "(|\\/|\\/index\\.html)(\\?.*)?$")
+var reMainPage = new RegExp(BASE.replace("/", "\\/") + "(|\\/|\\/index\\.html)(\\?.*)?$")
 var database;
 var dbLoading = false;
 var dbPromises = [];
