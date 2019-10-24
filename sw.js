@@ -1,4 +1,4 @@
-const VERSION = "0.6";
+const VERSION = "0.7";
 const CACHE_NAME = "flagplayer-cache-1";
 const BASE = "https://www.seneral.dev/FlagPlayerDev";
 var reMainPage = new RegExp(BASE.replace("/", "\\") + "(|\\/|\\/index\\.html)(\\?.*)?$")

@@ -228,6 +228,7 @@ function sw_install () {
 	if ('serviceWorker' in navigator) {
 
 		navigator.serviceWorker.oncontrollerchange = function () {
+			console.log("Detected activating of new SW - reloading");
 			if (sw_refreshing) return;
 			window.location.reload();
 			sw_refreshing = true;
@@ -251,29 +252,31 @@ function sw_install () {
 				var installing = registration.installing;
 				if (installing) {
 					installing.onstatechange = function () {
-						if (installing.state == "installed" || installing.state == "active") {
+						if (installing.state == "installed" || installing.state == "active") 
 							update();
-						}
+						else 
+							console.log("Installing SW state change to " + installing.state);
 					};
 				}
-				else {
-					update();
-				}
+				else update();
 			};
 
 			sw_current = navigator.serviceWorker.controller;
-			if (!sw_current) sw_updated = registration.active || registration.installing;
-			else {
-				console.log("Found current SW!");
+			if (sw_current) {
+				console.log("Successfully installed service worker: Caching and Offline Mode are available!");
+				sw_current.onstatechange = function () {
+					console.log("Current SW state change to " + installing.state);
+				}
 			}
-
-			console.log("Successfully installed service worker: Caching and Offline Mode are available!");
+			else
+				console.log("Successfully installed service worker: Caching and Offline Mode are available after reload!");
 		}, function(e) {
 			console.warn("Failed to install service worker: Caching and Offline Mode will be unavailable!");
 		});
 	}
 }
 function sw_update () { 
+	console.log("Sending skipWaiting to " + sw_updated + " - current: " + sw_current);
 	sw_updated.postMessage({ action: 'skipWaiting' });
 	setDisplay("newVersionPanel", "none");
 }
