@@ -1,4 +1,4 @@
-var CACHE_NAME = "flagplayer-cache-2";
+var CACHE_NAME = "flagplayer-cache-1";
 var BASE = location.href.substring(0, location.href.lastIndexOf("/"));
 var reMainPage = new RegExp(BASE.replace("/", "\\/") + "(|\\/|\\/index\\.html)(\\?.*)?$")
 var database;
@@ -56,6 +56,7 @@ self.addEventListener('install', function(event) {
 });
 self.addEventListener('activate', function(event) {
 	event.waitUntil(
+		// Delete unused stuff (most likely not whole caches, but keys in caches)
 		caches.keys().then(keys => Promise.all(
 			keys.map(key => {
 				if (key.startsWith("flagplayer-cache-") && key != CACHE_NAME)

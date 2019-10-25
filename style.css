@@ -760,6 +760,9 @@ body {
 /* --------------------------- */
 
 .section.comments {}
+.vdCommentHeader {
+	height: 2em;
+}
 .vdCommentList {}
 .cmContainer {
 	position: relative;
@@ -1034,9 +1037,6 @@ button {
 	background: none;
 	cursor: pointer;
 	color: var(--txt-sec-color);
-}
-.popupPanel {
-	display: none !important;
 }
 .blurred {
 	filter: blur(4px);
