@@ -1350,6 +1350,7 @@ button.contentLoader, span.contentLoader, button.collapser, span.collapser {
 .tabBar {
 	display: flex;
 	flex-direction: row;
+	flex-wrap: wrap;
 	margin-bottom: 1em;
 }
 .mobile .tabBar {
