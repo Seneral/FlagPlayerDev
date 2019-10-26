@@ -640,6 +640,7 @@ body {
 }
 .playlist .liElement {
 	height: 54px;
+	margin: 6px 0;
 }
 .playlist .liThumbnail {
 	width: 96px;
