@@ -97,6 +97,7 @@ self.addEventListener('fetch', function(event) {
 		event.respondWith(
 			fetch(event.request)
 			.then(function(response) {
+				console.log("Response: ", response);
 				// Initiate caching of received response
 				response.clone().arrayBuffer()
 				.then(function(fetchData) {
