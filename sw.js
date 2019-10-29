@@ -73,7 +73,8 @@ self.addEventListener('activate', function(event) {
 self.addEventListener('message', function(event) {
 	if (event.data.action === 'skipWaiting') {
 		self.skipWaiting();
-	} else if (event.data.action === 'cacheRequest') {
+	}
+	else if (event.data.action === 'cacheRequest') {
 		console.log("Received Cache Request: ", event.data);
 		dbCacheRequest = event.data;
 	}
@@ -89,7 +90,7 @@ self.addEventListener('fetch', function(event) {
 		// Always use cached app html
 		event.respondWith(caches.match("./index.html"));
 	}
-	else if (dbCacheRequest && dbCacheRequest.streamURL === url) {
+	else if (dbCacheRequest && dbCacheRequest.streamURL.startsWith(url)) {
 		// Currently caching: Cache request in the media cache
 		var fetchPos = Number(/^bytes\=(\d+)\-$/g.exec(event.request.headers.get('range'))[1]);
 		console.log('Caching range:', fetchPos);
@@ -98,48 +99,54 @@ self.addEventListener('fetch', function(event) {
 			.then(function(response) {
 				// Initiate caching of received response
 				response.clone().arrayBuffer()
-				.then (function (fetchData) {
+				.then(function(fetchData) {
 					caches.open("flagplayer-media")
-					.then (function (cache) {
-						return cache.match(url);
-					}).then (function (cacheMatch) {
-						if (cacheMatch) {
-							console.log('Existing cache match:', cacheMatch);
-							var cachePos = Number(/^bytes\=(\d+)\-$/g.exec(cacheMatch.request.headers.get('range'))[1]);
-							console.log('Existing cache range:', cachePos);
+					.then(function(cache) {
+						return cache.match(url)
+						.then(function(cacheMatch) {
+							if (cacheMatch) {
+								console.log('Existing cache match:', cacheMatch);
+								var cachePos = Number(/^bytes\=(\d+)\-$/g.exec(cacheMatch.request.headers.get('range'))[1]);
+								console.log('Existing cache range:', cachePos);
 
-							cacheMatch.arrayBuffer()
-							.then(function (cacheData) {	
-								console.log("Combine cache pos " + cachePos + " length " + cacheData.length + 
-									" with new pos " + fetchPos + " length " + fetchData.length);
-								var combineData = fetchData; // TODO
-								var newCache = new Response(combineData, {
+								cacheMatch.arrayBuffer()
+								.then(function(cacheData) {
+									console.log("Combine cache pos " + cachePos + " length " + cacheData.length +
+										" with new pos " + fetchPos + " length " + fetchData.length);
+									var combinedData = new ArrayBuffer(Math.max(cacheData.length, fetchPos+fetchData.length));
+									var combinedArray = new Int32Array(combinedData);
+									var cacheArray = new Int32Array(cacheData);
+									var fetchArray = new Int32Array(fetchData);
+									combinedArray.set(cacheArray, 0);
+									combinedArray.set(fetchArray, fetchPos);
+									var newCache = new Response(combinedData, {
+										status: 206,
+										statusText: 'Partial Content',
+										headers: [
+											// ['Content-Type', 'video/webm'],
+											['Content-Range', 'bytes ' + Math.min(fetchPos, cachePos) + '-' +
+												(combinedData.byteLength - 1) + '/' + combinedData.byteLength
+											]
+										]
+									});
+									cache.put(dbCacheRequest.cacheURL, newCache);
+								});
+							}
+							else {
+								console.log("Initializing media cache with pos " + fetchPos + " lenght " + fetchData.length);
+								var newCache = new Response(fetchData, {
 									status: 206,
 									statusText: 'Partial Content',
 									headers: [
 										// ['Content-Type', 'video/webm'],
-										['Content-Range', 'bytes ' + max(fetchPos, cachePos) + '-' +
-											(combineData.byteLength - 1) + '/' + combineData.byteLength
+										['Content-Range', 'bytes ' + fetchPos + '-' +
+											(fetchData.byteLength - 1) + '/' + fetchData.byteLength
 										]
 									]
-								})
-							});
-						}
-						else {
-							console.log("Initializing media cache with pos " + fetchPos + " lenght " + fetchData.length);
-							var newCache = new Response(fetchData, {
-								status: 206,
-								statusText: 'Partial Content',
-								headers: [
-									// ['Content-Type', 'video/webm'],
-									['Content-Range', 'bytes ' + fetchPos + '-' +
-										(fetchData.byteLength - 1) + '/' + fetchData.byteLength
-									]
-								]
-							});
-							cache.put (dbCacheRequest.cacheURL, newCache);
-						}
-						
+								});
+								cache.put(dbCacheRequest.cacheURL, newCache);
+							}
+						});
 					});
 				});
 				// Return response
@@ -175,7 +182,7 @@ self.addEventListener('fetch', function(event) {
 				});
 			})
 		);
-	} 
+	}
 	else {
 		event.respondWith(
 			caches.match(event.request)
@@ -197,7 +204,7 @@ self.addEventListener('fetch', function(event) {
 							var cacheResponse = response.clone();
 							db_hasVideo(thumb[1]).then(function() { // Video stored, cache thumbnail
 								caches.open(IMG_CACHE).then((cache) => cache.put(event.request, cacheResponse));
-							}).catch(function () {});
+							}).catch(function() {});
 						}
 					}
 					return response;

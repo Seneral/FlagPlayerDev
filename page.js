@@ -1030,6 +1030,9 @@ function db_cacheVideoStream () {
 	
 	md_resetStreams();
 	ct_curTime = 0;
+	audioMedia.src = ct_sources.audio + "&no-cache=true";
+	audioMedia.load();
+	md_resetStreams();
 	md_updateStreams();
 
 	return;
