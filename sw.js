@@ -93,23 +93,26 @@ self.addEventListener('fetch', function(event) {
 			caches.open("flagplayer-media")
 			.then(function(cache) {
 				return cache.match(url);
-			}).then(function(cacheData) {
-				if (cacheData)
-					return cacheData.arrayBuffer();
-				return fetch(event.request).then(function(fetchData) {
-					return fetchData.arrayBuffer();
+			}).then(function(cacheResponse) {
+				if (cacheResponse)
+					return cacheResponse;
+				return fetch(event.request).then(function(fetchResponse) {
+					return fetchResponse;
 				});
-			}).then(function(byteData) {
+			}).then(function(response) {
+				response.arrayBuffer()
+				.then(function(byteData) {
 				return new Response(byteData.slice(pos), {
 					status: 206,
 					statusText: 'Partial Content',
 					headers: [
-						// ['Content-Type', 'video/webm'],
+						['Content-Type', response.headers.get("content-type") ],
 						['Content-Range', 'bytes ' + pos + '-' +
 							(byteData.byteLength - 1) + '/' + byteData.byteLength
 						]
 					]
 				});
+			})
 			})
 		);
 	}

@@ -679,10 +679,17 @@ function ct_mediaLoad () {
 	ui_setPoster();
 	ui_updatePlayerState();
 	ui_setPlaylistPosition(ct_getVideoPlIndex());
-	db_getVideo(yt_videoID, function (videoData) {
-		// videoData.cachedURL
-	});
 	yt_loadVideoData();
+	db_getVideo(yt_videoID, function (videoData) {
+		if (videoData) {
+			console.log("Loading video metadata from cache!");
+			if (videoData.cachedURL) 
+				yt_video.cachedURL = videoData.cachedURL;
+			yt_video.meta = {};
+			yt_video.meta.title = videoData.title;
+			ui_setVideoMetadata();
+		}
+	});
 }
 function ct_mediaLoaded () {
 	if (ct_state != State.Error) {
@@ -1682,10 +1689,10 @@ function yt_parseChannelPageVideos (videos) {
 
 function yt_loadVideoData() {
 	if (!yt_videoID || yt_videoID.length != 11) return;
-	yt_video = undefined;
+	var loadingID = yt_videoID;
+	yt_video = { videoID: yt_videoID };
 	yt_browse ("/watch?v=" + yt_videoID, function () {
-		if (ct_page != Page.Media) return;
-		yt_video = { videoID: yt_videoID };
+		if (ct_page != Page.Media || loadingID != yt_videoID) return;
 		// Check age restriction
 		yt_video.ageRestricted = yt_page.html.indexOf("og:restrictions:age") != -1;
 		if (yt_video.ageRestricted) console.warn("Video is age restricted!");
@@ -2568,6 +2575,11 @@ function ui_resetStreams () {
 /* -------------------- */
 
 function ui_setVideoMetadata() {
+	if (!yt_video.loaded) {
+		sec_video.style.display = "block";
+		I("vdTitle").innerText = yt_video.meta.title;
+		return;
+	}
 	sec_video.style.display = "block";
 	sec_comments.style.display = "block";
 	I("vdTitle").innerText = yt_video.meta.title;
