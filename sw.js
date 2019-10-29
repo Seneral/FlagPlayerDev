@@ -97,10 +97,10 @@ self.addEventListener('fetch', function(event) {
 		event.respondWith(
 			fetch(event.request)
 			.then(function(response) {
-				if (!response.ok) {
-					console.warn("Not-ok response!", response);
-					return;
-				}
+				//"if (!response.ok) {
+				//	console.warn("Not-ok response!", response);
+			//		return;
+			//	}
 				console.log("Response: ", response);
 				// Initiate caching of received response
 				var res = response.clone();
