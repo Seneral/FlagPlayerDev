@@ -1021,13 +1021,16 @@ function db_cacheVideoStream () {
 	}
 
 	var cacheID = yt_video.videoID;
-	var cacheURL = "https://flagplayer.seneral.dev/caches/vd-" + yt_video.videoID;
+	var cacheURL = "https://flagplayer.seneral.dev/mediacache/vd-" + yt_video.videoID;
 	var streamURL = ct_sources.audio;
 
 	console.log("Caching for video " + cacheID);
 
-	sw_updated.postMessage({ action: "cacheRequest", cacheID: yt_video.videoID, cacheURL: cacheURL, streamURL: ct_sources.audio });
+	sw_current.postMessage({ action: "cacheRequest", cacheID: yt_video.videoID, cacheURL: cacheURL, streamURL: ct_sources.audio });
 	
+	md_resetStreams();
+	md_updateStreams();
+
 	return;
 
 	window.caches.open("flagplayer-media").then (function (cache) {
