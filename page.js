@@ -413,8 +413,8 @@ function ct_updatePageState () { // Update page with new information
 	if (ct_page == Page.Home)
 		state.title = "Home | FlagPlayer";
 
-	if (ct_page == Page.Media)  {
-		if (yt_video) state.title = yt_video.meta.title + " | FlagPlayer";
+	if (ct_page == Page.Media) {
+		if (yt_video && yt_video.loaded) state.title = yt_video.meta.title + " | FlagPlayer";
 		else if (!state.title) state.title = "Loading | FlagPlayer";
 		url.searchParams.set("v", yt_videoID);
 		yt_url += "/watch?v=" + yt_videoID;
@@ -1020,7 +1020,7 @@ function db_getVideo (videoID, callback) {
 /* ------------------------------------------------- */
 
 function db_cacheVideoStream () {
-	if (!yt_video) return;
+	if (!yt_video.loaded) return;
 	if (!ct_sources || !ct_sources.audio) return;
 	if (!("serviceWorker" in navigator)) {
 		console.error("Service Worker required in order to cache videos!");
@@ -2412,7 +2412,7 @@ function ui_setPoster () {
 }
 
 function ui_setupMediaSession () {
-	if (navigator.mediaSession) {
+	if (navigator.mediaSession && yt_video && yt_video.loaded) {
 		navigator.mediaSession.metadata = new MediaMetadata ({
 			title: yt_video.meta.title,
 			artist: yt_video.meta.uploader.name,
@@ -3721,7 +3721,7 @@ function md_daVal (s) { return s.aBR; }
 function md_lvVal (s) { return s.vResY; }
 
 function md_selectableStreams () {
-	if (!yt_video && yt_video.loaded) return undefined;
+	if (!yt_video || !yt_video.loaded) return undefined;
 	// Return streams available in each category sorted from best to worst
 	var streams = {};
 	streams.dashVideo = yt_video.streams
@@ -3736,7 +3736,7 @@ function md_selectableStreams () {
 	return streams;
 }
 function md_selectStreams () {
-	if (!yt_video && yt_video.loaded) return undefined;
+	if (!yt_video || !yt_video.loaded) return undefined;
 	// Return the selected stream in each category according to preferences
 	var select = function (s, pref, value, sec) { // SECondary selector, f.E. container
 		if (pref == "NONE" || s.length == 0) return undefined;
