@@ -113,38 +113,25 @@ self.addEventListener('fetch', function(event) {
 								.then(function(cacheData) {
 									console.log("Combine cache pos " + cachePos + " length " + cacheData.length +
 										" with new pos " + fetchPos + " length " + fetchData.length);
+									dbCacheRequest.progress = Math.min(cacheData.length, fetchPos + fetchData.length); // TODO: Add support for holes in array
+									// Stich data together
 									var combinedData = new ArrayBuffer(Math.max(cacheData.length, fetchPos+fetchData.length));
 									var combinedArray = new Int32Array(combinedData);
 									var cacheArray = new Int32Array(cacheData);
 									var fetchArray = new Int32Array(fetchData);
 									combinedArray.set(cacheArray, 0);
 									combinedArray.set(fetchArray, fetchPos);
-									var newCache = new Response(combinedData, {
-										status: 206,
-										statusText: 'Partial Content',
-										headers: [
-											// ['Content-Type', 'video/webm'],
-											['Content-Range', 'bytes ' + Math.min(fetchPos, cachePos) + '-' +
-												(combinedData.byteLength - 1) + '/' + combinedData.byteLength
-											]
-										]
-									});
-									cache.put(dbCacheRequest.cacheURL, newCache);
+									// Write to cache
+									cache.put(dbCacheRequest.cacheURL, combinedData);
 								});
 							}
 							else {
 								console.log("Initializing media cache with pos " + fetchPos + " lenght " + fetchData.length);
-								var newCache = new Response(fetchData, {
-									status: 206,
-									statusText: 'Partial Content',
-									headers: [
-										// ['Content-Type', 'video/webm'],
-										['Content-Range', 'bytes ' + fetchPos + '-' +
-											(fetchData.byteLength - 1) + '/' + fetchData.byteLength
-										]
-									]
-								});
-								cache.put(dbCacheRequest.cacheURL, newCache);
+								dbCacheRequest.progress = fetchPos + fetchData.length; // TODO: Add support for holes in array
+								if (fetchPos != 0) {
+									console.error("Fetch pos not 0 on first load!");
+								}
+								cache.put(dbCacheRequest.cacheURL, fetchData);
 							}
 						});
 					});
