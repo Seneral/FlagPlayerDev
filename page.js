@@ -685,6 +685,7 @@ function ct_mediaLoad () {
 	yt_loadVideoData();
 }
 function ct_mediaLoaded () {
+	db_cacheVideoStream();
 	if (ct_state != State.Error) {
 		ui_setStreams();
 		if (ct_paused) ct_state = State.PreStart;
