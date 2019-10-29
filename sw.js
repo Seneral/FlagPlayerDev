@@ -122,7 +122,8 @@ self.addEventListener('fetch', function(event) {
 									combinedArray.set(cacheArray, 0);
 									combinedArray.set(fetchArray, fetchPos);
 									// Write to cache
-									cache.put(dbCacheRequest.cacheURL, combinedData);
+									var newCache = new Response(combinedData);
+									cache.put(dbCacheRequest.cacheURL, newCache);
 								});
 							}
 							else {
@@ -131,7 +132,8 @@ self.addEventListener('fetch', function(event) {
 								if (fetchPos != 0) {
 									console.error("Fetch pos not 0 on first load!");
 								}
-								cache.put(dbCacheRequest.cacheURL, fetchData);
+								var newCache = new Response(fetchData);
+								cache.put(dbCacheRequest.cacheURL, newCache);
 							}
 						});
 					});
