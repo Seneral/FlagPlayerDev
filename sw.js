@@ -74,10 +74,6 @@ self.addEventListener('message', function(event) {
 	if (event.data.action === 'skipWaiting') {
 		self.skipWaiting();
 	}
-	else if (event.data.action === 'cacheRequest') {
-		console.log("Received Cache Request: ", event.data);
-		dbCacheRequest = event.data;
-	}
 });
 
 self.addEventListener('fetch', function(event) {

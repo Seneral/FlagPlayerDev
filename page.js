@@ -1047,8 +1047,7 @@ function db_cacheVideoStream () {
 			response.arrayBuffer()
 			.then(function(fetchData) {
 				console.log("Fetch data length " + fetchData.byteLength);
-				var newCache = new Response(fetchData);
-				cache.put(dbCacheRequest.cacheURL, newCache);
+				cache.put(cacheURL, new Response(fetchData));
 
 				db_access(function () {
 					var videoTransaction = db_database.transaction("videos", "readwrite");
