@@ -85,7 +85,7 @@ self.addEventListener('fetch', function(event) {
 		// Always use cached app html
 		event.respondWith(caches.match("./index.html"));
 	}
-	else if (dbCacheRequest.streamURL === url) {
+	else if (dbCacheRequest && dbCacheRequest.streamURL === url) {
 		// Currently caching: Cache request in the media cache
 		var fetchPos = Number(/^bytes\=(\d+)\-$/g.exec(event.request.headers.get('range'))[1]);
 		console.log('Caching range:', fetchPos);
