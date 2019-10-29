@@ -97,10 +97,16 @@ self.addEventListener('fetch', function(event) {
 		event.respondWith(
 			fetch(event.request)
 			.then(function(response) {
+				if (!response.ok) {
+					console.warn("Not-ok response!", response);
+					return;
+				}
 				console.log("Response: ", response);
 				// Initiate caching of received response
-				response.clone().arrayBuffer()
+				var res = response.clone();
+				response.arrayBuffer()
 				.then(function(fetchData) {
+					console.log("Cloned response - buffer size ", fetchData.byteLength);
 					caches.open("flagplayer-media")
 					.then(function(cache) {
 						return cache.match(url)
@@ -140,7 +146,8 @@ self.addEventListener('fetch', function(event) {
 					});
 				});
 				// Return response
-				return response;
+				//return response;
+				return res;
 			})
 		);
 
