@@ -1029,6 +1029,7 @@ function db_cacheVideoStream () {
 	sw_current.postMessage({ action: "cacheRequest", cacheID: yt_video.videoID, cacheURL: cacheURL, streamURL: ct_sources.audio });
 	
 	md_resetStreams();
+	ct_curTime = 0;
 	md_updateStreams();
 
 	return;
