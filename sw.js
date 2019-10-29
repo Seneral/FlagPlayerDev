@@ -91,7 +91,7 @@ self.addEventListener('fetch', function(event) {
 		console.log('Caching range:', fetchPos);
 		event.respondWith(
 			fetch(event.request)
-			.then(function(response) => {
+			.then(function(response) {
 				// Initiate caching of received response
 				response.clone().arrayBuffer()
 				.then (function (fetchData) {
@@ -155,7 +155,7 @@ self.addEventListener('fetch', function(event) {
 			}).then(function(cacheData) {
 				if (cacheData)
 					return cacheData.arrayBuffer();
-				return fetch(event.request).then(function(fetchData) => {
+				return fetch(event.request).then(function(fetchData) {
 					return fetchData.arrayBuffer();
 				});
 			}).then(function(byteData) {
