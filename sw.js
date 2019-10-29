@@ -90,71 +90,8 @@ self.addEventListener('fetch', function(event) {
 		// Always use cached app html
 		event.respondWith(caches.match("./index.html"));
 	}
-	/*else if (dbCacheRequest && url.includes(dbCacheRequest.streamURL)) {
-		// Currently caching: Cache request in the media cache
-		var fetchPos = Number(/^bytes\=(\d+)\-$/g.exec(event.request.headers.get('range'))[1]);
-		console.log('Caching range:', fetchPos);
-		event.respondWith(
-			fetch(event.request)
-			.then(function(response) {
-				//"if (!response.ok) {
-				//	console.warn("Not-ok response!", response);
-			//		return;
-			//	}
-				console.log("Response: ", response);
-				// Initiate caching of received response
-				var res = response.clone();
-				response.arrayBuffer()
-				.then(function(fetchData) {
-					console.log("Cloned response - buffer size ", fetchData.byteLength);
-				console.log("Response: ", response);
-					caches.open("flagplayer-media")
-					.then(function(cache) {
-						return cache.match(url)
-						.then(function(cacheMatch) {
-							if (cacheMatch) {
-								console.log('Existing cache match:', cacheMatch);
-								var cachePos = Number(/^bytes\=(\d+)\-$/g.exec(cacheMatch.request.headers.get('range'))[1]);
-								console.log('Existing cache range:', cachePos);
-
-								cacheMatch.arrayBuffer()
-								.then(function(cacheData) {
-									console.log("Combine cache pos " + cachePos + " length " + cacheData.byteLength +
-										" with new pos " + fetchPos + " length " + fetchData.byteLength);
-									dbCacheRequest.progress = Math.min(cacheData.byteLength, fetchPos + fetchData.byteLength); // TODO: Add support for holes in array
-									// Stich data together
-									var combinedData = new ArrayBuffer(Math.max(cacheData.byteLength, fetchPos+fetchData.byteLength));
-									var combinedArray = new Int32Array(combinedData);
-									var cacheArray = new Int32Array(cacheData);
-									var fetchArray = new Int32Array(fetchData);
-									combinedArray.set(cacheArray, 0);
-									combinedArray.set(fetchArray, fetchPos);
-									// Write to cache
-									var newCache = new Response(combinedData);
-									cache.put(dbCacheRequest.cacheURL, newCache);
-								});
-							}
-							else {
-								console.log("Initializing media cache with pos " + fetchPos + " lenght " + fetchData.byteLength);
-								dbCacheRequest.progress = fetchPos + fetchData.byteLength; // TODO: Add support for holes in array
-								if (fetchPos != 0) {
-									console.error("Fetch pos not 0 on first load!");
-								}
-								var newCache = new Response(fetchData);
-								cache.put(dbCacheRequest.cacheURL, newCache);
-							}
-						});
-					});
-				});
-				// Return response
-				//return response;
-				return res;
-			})
-		);
-
-	}*/
 	else if (url.includes("/mediacache/vd-")) {
-		// Try to read it from the media cache
+		// Try to read from the media cache
 		var pos = Number(/^bytes\=(\d+)\-$/g.exec(event.request.headers.get('range'))[1]);
 		console.log('Range request for starting position:', pos);
 		event.respondWith(

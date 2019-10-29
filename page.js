@@ -1036,46 +1036,20 @@ function db_cacheVideoStream () {
 	return;*/
 
 	window.caches.open("flagplayer-media").then (function (cache) {
-		/*
-		var selectableStreams = md_selectableStreams();
-	fillDropdown(I("select_dashVideo"), selectableStreams.dashVideo.map(function(s) { 
-		return { value: s.vResY*100+s.vFPS, label: s.vResY + "p" + (s.vFPS != 30? "" + s.vFPS : "") }; 
-	}));*/
+
 		console.log("Opened cache!");
 
-		/*return fetch(ct_pref.corsAPIHost + streamURL)
-		.then(function(data) {
-			const reader = data.body.getReader();
-			return new ReadableStream({
-				async start(controller) {
-					while (true) {
-						const { done, value } = await reader.read();
-						if (done) break;
-						if (!file.content) {
-							file.content = value;
-						}
-						else {
-							file.content += value;
-						}
-						controller.enqueue(value);
-					}
-					controller.close();
-					reader.releaseLock();
-				}
-			});
-		})
-		.then(rs => new Response(rs))*/
-
-		/*return fetch(ct_pref.corsAPIHost + streamURL)
+		
+		return fetch(ct_pref.corsAPIHost + streamURL, { headers: { "range": "bytes=0-" } })
 		.then(function(response) {
-			return response.blob();
-		})
-		.then(function(data) {
-			console.log("Downloaded video stream!");
-			videoData = new Response(data);
-			return cache.put(cacheURL, videoData)
-			.then (function () {
-				console.log("Cached video stream as " + cacheURL);
+			console.log("Downloaded video stream!", response);
+			console.log("Fetch Content-Length: ", response.headers.get("content-length"));
+			response.arrayBuffer()
+			.then(function(fetchData) {
+				console.log("Fetch data length " + fetchData.byteLength);
+				var newCache = new Response(fetchData);
+				cache.put(dbCacheRequest.cacheURL, newCache);
+
 				db_access(function () {
 					var videoTransaction = db_database.transaction("videos", "readwrite");
 					var videoStore = videoTransaction.objectStore("videos");
@@ -1088,17 +1062,6 @@ function db_cacheVideoStream () {
 						};
 					};
 				});
-			});
-		});*/
-
-		
-		return fetch(ct_pref.corsAPIHost + streamURL, { headers: { "range": "bytes=0-" } })
-		.then(function(response) {
-			console.log("Downloaded video stream!", response);
-			console.log("Fetch Content-Length: ", response.headers.get("content-length"));
-			response.arrayBuffer()
-			.then(function(fetchData) {
-				console.log("Fetch data length " + fetchData.byteLength);
 
 				/*return cache.match(url)
 				.then(function(cacheMatch) {
