@@ -90,7 +90,7 @@ self.addEventListener('fetch', function(event) {
 		// Always use cached app html
 		event.respondWith(caches.match("./index.html"));
 	}
-	else if (dbCacheRequest && url.includes(dbCacheRequest.streamURL)) {
+	/*else if (dbCacheRequest && url.includes(dbCacheRequest.streamURL)) {
 		// Currently caching: Cache request in the media cache
 		var fetchPos = Number(/^bytes\=(\d+)\-$/g.exec(event.request.headers.get('range'))[1]);
 		console.log('Caching range:', fetchPos);
@@ -152,7 +152,7 @@ self.addEventListener('fetch', function(event) {
 			})
 		);
 
-	}
+	}*/
 	else if (url.includes("/mediacache/vd-")) {
 		// Try to read it from the media cache
 		var pos = Number(/^bytes\=(\d+)\-$/g.exec(event.request.headers.get('range'))[1]);

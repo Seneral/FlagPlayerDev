@@ -1026,14 +1026,14 @@ function db_cacheVideoStream () {
 
 	console.log("Caching for video " + cacheID);
 
-	sw_current.postMessage({ action: "cacheRequest", cacheID: yt_video.videoID, cacheURL: cacheURL, streamURL: ct_sources.audio });
+	/*sw_current.postMessage({ action: "cacheRequest", cacheID: yt_video.videoID, cacheURL: cacheURL, streamURL: ct_sources.audio });
 	
 	md_resetStreams();
 	ct_curTime = 0;
 	audioMedia.src = ct_pref.corsAPIHost + ct_sources.audio;
 	audioMedia.load();
 
-	return;
+	return;*/
 
 	window.caches.open("flagplayer-media").then (function (cache) {
 		/*
@@ -1042,43 +1042,8 @@ function db_cacheVideoStream () {
 		return { value: s.vResY*100+s.vFPS, label: s.vResY + "p" + (s.vFPS != 30? "" + s.vFPS : "") }; 
 	}));*/
 		console.log("Opened cache!");
-		/*return cache.add(streamURL)
-		.then(function() {
-			console.log("Downloaded and cached video stream as " + cacheURL);
-			db_access(function () {
-				var videoTransaction = db_database.transaction("videos", "readwrite");
-				var videoStore = videoTransaction.objectStore("videos");
-				videoStore.get(cacheID).onsuccess = function (e) {
-					var videoCache = e.target.result;
-					videoCache.cachedURL = cacheURL;
-					console.log("Modified cached video!");
-					videoStore.put(video).onsuccess = function () {
-						console.log("Applied modification!");
-					};
-				};
-			});
-		});*/
-		/*WGET_CORS(ct_pref.corsAPIHost + streamURL, function () {
-			console.log("Downloaded video stream!");
-			return cache.put(cacheURL, data)
-			.then (function () {
-				console.log("Cached video stream as " + cacheURL);
-				db_access(function () {
-					var videoTransaction = db_database.transaction("videos", "readwrite");
-					var videoStore = videoTransaction.objectStore("videos");
-					videoStore.get(cacheID).onsuccess = function (e) {
-						var videoCache = e.target.result;
-						videoCache.cachedURL = cacheURL;
-						console.log("Modified cached video!");
-						videoStore.put(videoCache).onsuccess = function () {
-							console.log("Applied modification!");
-						};
-					};
-				});
-			});
-		});
 
-		return fetch(ct_pref.corsAPIHost + streamURL)
+		/*return fetch(ct_pref.corsAPIHost + streamURL)
 		.then(function(data) {
 			const reader = data.body.getReader();
 			return new ReadableStream({
@@ -1127,7 +1092,7 @@ function db_cacheVideoStream () {
 		});*/
 
 		
-		return fetch(streamURL, { mode: 'no-cors' })
+		return fetch(ct_pref.corsAPIHost + streamURL, { headers: { "range": "bytes=0-" } })
 		.then(function(data) {
 			console.log("Downloaded video stream!", data);
 			return cache.put(cacheURL, data)
