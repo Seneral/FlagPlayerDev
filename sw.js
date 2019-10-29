@@ -111,11 +111,11 @@ self.addEventListener('fetch', function(event) {
 
 								cacheMatch.arrayBuffer()
 								.then(function(cacheData) {
-									console.log("Combine cache pos " + cachePos + " length " + cacheData.length +
-										" with new pos " + fetchPos + " length " + fetchData.length);
-									dbCacheRequest.progress = Math.min(cacheData.length, fetchPos + fetchData.length); // TODO: Add support for holes in array
+									console.log("Combine cache pos " + cachePos + " length " + cacheData.byteLength +
+										" with new pos " + fetchPos + " length " + fetchData.byteLength);
+									dbCacheRequest.progress = Math.min(cacheData.byteLength, fetchPos + fetchData.byteLength); // TODO: Add support for holes in array
 									// Stich data together
-									var combinedData = new ArrayBuffer(Math.max(cacheData.length, fetchPos+fetchData.length));
+									var combinedData = new ArrayBuffer(Math.max(cacheData.byteLength, fetchPos+fetchData.byteLength));
 									var combinedArray = new Int32Array(combinedData);
 									var cacheArray = new Int32Array(cacheData);
 									var fetchArray = new Int32Array(fetchData);
@@ -127,8 +127,8 @@ self.addEventListener('fetch', function(event) {
 								});
 							}
 							else {
-								console.log("Initializing media cache with pos " + fetchPos + " lenght " + fetchData.length);
-								dbCacheRequest.progress = fetchPos + fetchData.length; // TODO: Add support for holes in array
+								console.log("Initializing media cache with pos " + fetchPos + " lenght " + fetchData.byteLength);
+								dbCacheRequest.progress = fetchPos + fetchData.byteLength; // TODO: Add support for holes in array
 								if (fetchPos != 0) {
 									console.error("Fetch pos not 0 on first load!");
 								}
