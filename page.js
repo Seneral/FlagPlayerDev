@@ -1093,10 +1093,46 @@ function db_cacheVideoStream () {
 
 		
 		return fetch(ct_pref.corsAPIHost + streamURL, { headers: { "range": "bytes=0-" } })
-		.then(function(data) {
-			console.log("Downloaded video stream!", data);
-			return cache.put(cacheURL, data)
-			.then (function () {
+		.then(function(response) {
+			console.log("Downloaded video stream!", response);
+			console.log("Fetch Content-Length: ", response.headers.get("content-length"));
+			response.arrayBuffer()
+			.then(function(fetchData) {
+				console.log("Fetch data length " + fetchData.byteLength);
+
+				/*return cache.match(url)
+				.then(function(cacheMatch) {
+					if (cacheMatch) {
+						console.log('Existing cache match:', cacheMatch);
+
+						cacheMatch.arrayBuffer()
+						.then(function(cacheData) {
+							console.log("Existing cache length " + data.byteLength);
+							// Stich data together
+							var combinedData = new ArrayBuffer(Math.max(cacheData.byteLength, fetchPos+fetchData.byteLength));
+							var combinedArray = new Int32Array(combinedData);
+							var cacheArray = new Int32Array(cacheData);
+							var fetchArray = new Int32Array(fetchData);
+							combinedArray.set(cacheArray, 0);
+							combinedArray.set(fetchArray, fetchPos);
+							// Write to cache
+							var newCache = new Response(combinedData);
+							cache.put(dbCacheRequest.cacheURL, newCache);
+						});
+					}
+					else {
+						console.log("Initializing media cache with pos " + fetchPos + " lenght " + fetchData.byteLength);
+						dbCacheRequest.progress = fetchPos + fetchData.byteLength; // TODO: Add support for holes in array
+						if (fetchPos != 0) {
+							console.error("Fetch pos not 0 on first load!");
+						}
+						var newCache = new Response(fetchData);
+						cache.put(dbCacheRequest.cacheURL, newCache);
+					}
+				});*/
+			});
+			/*return cache.put(cacheURL, data)
+			.then(function () {
 				console.log("Cached video stream as " + cacheURL);
 				db_access(function () {
 					var videoTransaction = db_database.transaction("videos", "readwrite");
@@ -1110,7 +1146,7 @@ function db_cacheVideoStream () {
 						};
 					};
 				});
-			});
+			});*/
 		});
 	});
 }
