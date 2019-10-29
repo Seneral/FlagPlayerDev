@@ -1044,23 +1044,27 @@ function db_cacheVideoStream () {
 		.then(function(response) {
 			console.log("Downloaded video stream!", response);
 			console.log("Fetch Content-Length: ", response.headers.get("content-length"));
-			response.arrayBuffer()
-			.then(function(fetchData) {
-				console.log("Fetch data length " + fetchData.byteLength);
-				cache.put(cacheURL, new Response(fetchData));
+			var cacheResponse = new Response(response.body, {
+				status: 200,
+				headers: {
+					"content-length": response.headers.get("content-length"),
+					"content-type": response.headers.get("content-type"),
+				},
+			});
+			cache.put(cacheURL, cacheResponse);
 
-				db_access(function () {
-					var videoTransaction = db_database.transaction("videos", "readwrite");
-					var videoStore = videoTransaction.objectStore("videos");
-					videoStore.get(cacheID).onsuccess = function (e) {
-						var videoCache = e.target.result;
-						videoCache.cachedURL = cacheURL;
-						console.log("Modified cached video!");
-						videoStore.put(videoCache).onsuccess = function () {
-							console.log("Applied modification!");
-						};
+			db_access(function () {
+				var videoTransaction = db_database.transaction("videos", "readwrite");
+				var videoStore = videoTransaction.objectStore("videos");
+				videoStore.get(cacheID).onsuccess = function (e) {
+					var videoCache = e.target.result;
+					videoCache.cachedURL = cacheURL;
+					console.log("Modified cached video!");
+					videoStore.put(videoCache).onsuccess = function () {
+						console.log("Applied modification!");
 					};
-				});
+				};
+			});
 
 				/*return cache.match(url)
 				.then(function(cacheMatch) {
@@ -1092,7 +1096,6 @@ function db_cacheVideoStream () {
 						cache.put(dbCacheRequest.cacheURL, newCache);
 					}
 				});*/
-			});
 			/*return cache.put(cacheURL, data)
 			.then(function () {
 				console.log("Cached video stream as " + cacheURL);
