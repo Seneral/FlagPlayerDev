@@ -99,19 +99,19 @@ self.addEventListener('fetch', function(event) {
 					return fetchResponse;
 				});
 			}).then(function(response) {
-				response.arrayBuffer()
+				return response.arrayBuffer()
 				.then(function(byteData) {
-				return new Response(byteData.slice(pos), {
-					status: 206,
-					statusText: 'Partial Content',
-					headers: [
-						['Content-Type', response.headers.get("content-type") ],
-						['Content-Range', 'bytes ' + pos + '-' +
-							(byteData.byteLength - 1) + '/' + byteData.byteLength
+					return new Response(byteData.slice(pos), {
+						status: 206,
+						statusText: 'Partial Content',
+						headers: [
+							['Content-Type', response.headers.get("content-type") ],
+							['Content-Range', 'bytes ' + pos + '-' +
+								(byteData.byteLength - 1) + '/' + byteData.byteLength
+							]
 						]
-					]
-				});
-			})
+					});
+				})
 			})
 		);
 	}
