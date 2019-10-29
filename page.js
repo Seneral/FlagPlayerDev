@@ -263,6 +263,8 @@ function sw_install () {
 				}
 				else update();
 			};
+			if (registration.waiting) // Trigger after initial detection
+				registration.onupdatefound();
 		}, function(e) {
 			console.warn("Failed to install service worker: Caching and Offline Mode will be unavailable!");
 		});
@@ -677,6 +679,9 @@ function ct_mediaLoad () {
 	ui_setPoster();
 	ui_updatePlayerState();
 	ui_setPlaylistPosition(ct_getVideoPlIndex());
+	db_getVideo(yt_videoID, function (videoData) {
+		// videoData.cachedURL
+	});
 	yt_loadVideoData();
 }
 function ct_mediaLoaded () {
@@ -687,10 +692,7 @@ function ct_mediaLoaded () {
 		ct_totalTime = yt_video.meta.length;
 		ct_curTime = yt_parseNum(new URL(window.location.href).searchParams.get("t"));
 		ui_updateTimelineProgress();
-		db_getVideo (yt_videoID, function (videoData) {
-			yt_video.cachedURL = videoData.cachedURL;
-			md_updateStreams(); // Fires ct_mediaReady or ct_mediaError eventually
-		});
+		md_updateStreams(); // Fires ct_mediaReady or ct_mediaError eventually
 	}
 	ui_updatePlayerState();
 }
@@ -1023,6 +1025,11 @@ function db_cacheVideoStream () {
 	var streamURL = ct_sources.audio;
 
 	console.log("Caching for video " + cacheID);
+
+	sw_updated.postMessage({ action: "cacheRequest", cacheID: yt_video.videoID, cacheURL: cacheURL, streamURL: ct_sources.audio });
+	
+	return;
+
 	window.caches.open("flagplayer-media").then (function (cache) {
 		/*
 		var selectableStreams = md_selectableStreams();
@@ -2693,18 +2700,22 @@ function ui_resetRelatedVideos () {
 function ui_addComments (container, comments, startIndex, finished) {
 	I("vdCommentLabel").innerText = ui_formatNumber (yt_video.commentData.count) + " comments";
 	if (!startIndex) startIndex = 0;
+	var commentElements = [];
 	for(var i = startIndex; i < comments.length; i++) {
 		var comm = comments[i];
-		ht_appendCommentElement(container, comm.id, comm.author.userID? ("u=" + comm.author.userID) : ("c=" + comm.author.channelID), 
+		commentElements[i] = ht_appendCommentElement(container, 
+			comm.id, comm.author.userID? ("u=" + comm.author.userID) : ("c=" + comm.author.channelID), 
 			comm.author.profileImg, comm.author.name, comm.publishedTimeAgoText, ui_formatText(comm.text), 
 			ui_formatNumber(comm.likes), comm.replyData? comm.replyData.count : undefined);
 	}
 	// Separate read and writes to prevent excessive cache trashing
 	var commentHeights = [];
+	for(var i = startIndex; i < comments.length; i++) {
+		var collapsable = ui_hasDescendedClass(commentElements[i], "collapsable");
+		if (collapsable) commentHeights[i] = collapsable.offsetHeight;
+	}
 	for(var i = startIndex; i < comments.length; i++)
-		commentHeights[i] = container.children[i].offsetHeight;
-	for(var i = startIndex; i < comments.length; i++)
-		ui_setupCollapsableText(container.children[i].lastElementChild, 5, commentHeights[i]);
+		ui_setupCollapsableText(commentElements[i].lastElementChild, 5, commentHeights[i]);
 	// Move loader
 	var loader = Array.from(container.children).find(c => c.className.includes("contentLoader"));
 	if (loader) { // Update content loader button
@@ -2839,6 +2850,7 @@ function ui_resetChannelUploads () {
 /* -------------------- */
 
 function ui_setupPlaylist () {
+	ui_plScrollPos = 0;
 	I("plTitle").innerText = "";
 	I("plDetail").innerText = "";
 	sec_playlist.style.display = "block";
@@ -3524,8 +3536,11 @@ function onMouseClick (mouse) {
 	ui_updateControlBar(mouse);
 
 	// Handle In-Page Navigation
-	if (mouse.target && mouse.target.hasAttribute("navigation")) {
-		var match = mouse.target.getAttribute("navigation").match(/^(.*?)=(.*)$/);
+	if (mouse.target && (mouse.target.hasAttribute("navigation") || mouse.target.hasAttribute("nav"))) {
+		var nav = mouse.target;
+		while (!nav.hasAttribute("navigation"))
+			nav = nav.parentElement;
+		var match = nav.getAttribute("navigation").match(/^(.*?)=(.*)$/);
 		if (match) {
 			switch (match[1]) {
 				case "v":  ct_navVideo(match[2]); break;
@@ -4277,7 +4292,7 @@ function ht_appendCommentElement (container, commentID, authorNav, authorIMG, au
 			'</div>' +
 			'<div class="cmContentColumn selectable">' +
 				'<a navigation="' + authorNav + '" href="' + ct_getNavLink(authorNav) + '">' + 
-					'<span class="cmAuthorName">' + authorName + '</span>' +
+					'<span class="cmAuthorName oneline">' + authorName + '</span>' +
 				'</a>' +
 				'<a href="' + yt_url + '&lc=' + commentID + '" target="_blank">' +
 					'<span class="cmPostedDate">' + dateText + '</span>' +
