@@ -1030,9 +1030,9 @@ function db_cacheVideoStream () {
 	
 	md_resetStreams();
 	ct_curTime = 0;
-	audioMedia.src = ct_sources.audio + "&no-cache=true";
+	audioMedia.src = ct_pref.corsAPIHost + ct_sources.audio;
 	audioMedia.load();
-	
+
 	return;
 
 	window.caches.open("flagplayer-media").then (function (cache) {
@@ -1127,11 +1127,9 @@ function db_cacheVideoStream () {
 		});*/
 
 		
-		return fetch(ct_pref.corsAPIHost + streamURL)
+		return fetch(streamURL, { mode: 'no-cors' })
 		.then(function(data) {
-			if (!data.ok)
-				throw new TypeError('bad response status');
-			console.log("Downloaded video stream!");
+			console.log("Downloaded video stream!", data);
 			return cache.put(cacheURL, data)
 			.then (function () {
 				console.log("Cached video stream as " + cacheURL);

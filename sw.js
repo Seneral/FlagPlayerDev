@@ -104,14 +104,12 @@ self.addEventListener('fetch', function(event) {
 				console.log("Response: ", response);
 				// Initiate caching of received response
 				var res = response.clone();
-				/*response.arrayBuffer()
+				response.arrayBuffer()
 				.then(function(fetchData) {
 					console.log("Cloned response - buffer size ", fetchData.byteLength);
 				console.log("Response: ", response);
-					*/caches.open("flagplayer-media")
+					caches.open("flagplayer-media")
 					.then(function(cache) {
-						cache.put(dbCacheRequest.cacheURL, response);
-						return;
 						return cache.match(url)
 						.then(function(cacheMatch) {
 							if (cacheMatch) {
@@ -147,7 +145,7 @@ self.addEventListener('fetch', function(event) {
 							}
 						});
 					});
-				//});
+				});
 				// Return response
 				//return response;
 				return res;
