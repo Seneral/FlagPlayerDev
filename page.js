@@ -1160,7 +1160,7 @@ function db_cacheStream () {
 			var databaseWrite = db_access().then(function () {
 				var dbVideos = db_database.transaction("videos", "readwrite").objectStore("videos");
 				return new Promise (function (resolve, reject) {
-					dbVideos.get(videoID).onsuccess = function (e) {
+					dbVideos.get(cacheID).onsuccess = function (e) {
 						e.target.result.cachedURL = cacheURL;
 						dbVideos.put(e.target.result).onsuccess = resolve;
 					};
@@ -1172,14 +1172,14 @@ function db_cacheStream () {
 	});
 }
 
-function db_deleteCachedStream (videoID) {
+function db_deleteCachedStream (cacheID) {
 	return window.caches.open("flagplayer-media")
 	.then (function (cache) {
-		var cacheWrite = cache.delete(VIRT_CACHE + videoID);
+		var cacheWrite = cache.delete(VIRT_CACHE + cacheID);
 		var databaseWrite = db_access().then(function () {
 			var dbVideos = db_database.transaction("videos", "readwrite").objectStore("videos");
 			return new Promise (function (resolve, reject) {
-				dbVideos.get(videoID).onsuccess = function (e) {
+				dbVideos.get(cacheID).onsuccess = function (e) {
 					e.target.result.cachedURL = undefined;
 					dbVideos.put(e.target.result).onsuccess = resolve;
 				};
