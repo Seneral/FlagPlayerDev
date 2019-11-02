@@ -3793,9 +3793,9 @@ function onKeyUp (keyEvent) {
 function onMediaAbort () {
 	ct_mediaError(new MDError(10, this.tagName + " aborted!", true, this.tagName));
 }
-function onMediaError (error) {
-	if (!error.target || error.target.error.message != "MEDIA_ELEMENT_ERROR: Empty src attribute")  {
-		ct_mediaError(new MDError(error.code, error.message, true, error.target.tagName));
+function onMediaError (event) {
+	if (event.target.error.message != "MEDIA_ELEMENT_ERROR: Empty src attribute")  {
+		ct_mediaError(new MDError(event.target.error.code, event.target.error.message, true, event.target.tagName));
 	}
 }
 function onMediaStalled () {
