@@ -805,7 +805,7 @@ function ct_mediaReady () {
 	ui_updatePlayerState();
 }
 function ct_mediaError (error) {
-	if (error instanceof MDError && audioMedia.src.startsWith(VIRT_CACHE)) {
+	if (error instanceof MDError && error.tag && error.tag.src.startsWith(VIRT_CACHE)) {
 		console.error("Cached media file erroneous! Removing from cache. ", error);
 		db_deleteCachedStream(yt_videoID).then (function () {
 			if (ct_online) { // Load source
@@ -1174,7 +1174,8 @@ function db_cacheStream () {
 
 function db_deleteCachedStream (videoID) {
 	return window.caches.open("flagplayer-media")
-	.then (function (cache) {var cacheWrite = cache.delete(VIRT_CACHE + videoID);
+	.then (function (cache) {
+		var cacheWrite = cache.delete(VIRT_CACHE + videoID);
 		var databaseWrite = db_access().then(function () {
 			var dbVideos = db_database.transaction("videos", "readwrite").objectStore("videos");
 			return new Promise (function (resolve, reject) {
@@ -3791,11 +3792,11 @@ function onKeyUp (keyEvent) {
 /* -------------------- */
 
 function onMediaAbort () {
-	ct_mediaError(new MDError(10, this.tagName + " aborted!", true, this.tagName));
+	ct_mediaError(new MDError(10, this.tagName + " aborted!", true, this));
 }
 function onMediaError (event) {
 	if (event.target.error.message != "MEDIA_ELEMENT_ERROR: Empty src attribute")  {
-		ct_mediaError(new MDError(event.target.error.code, event.target.error.message, true, event.target.tagName));
+		ct_mediaError(new MDError(event.target.error.code, event.target.error.message, true, event.target));
 	}
 }
 function onMediaStalled () {
@@ -4034,9 +4035,6 @@ function md_checkBuffering(forceBuffer) {
 			ui_updatePlayerState();
 			md_timerCheckBuffering = setTimeout(md_checkBuffering, 500);
 		}
-		else {
-			md_assureSync();
-		}
 	}
 }
 function md_getBufferedAhead () {
@@ -4140,6 +4138,7 @@ function md_assureBuffer () {
 		if (ct_state == State.Started && !ct_flags.buffering) {
 			//console.log(bufferedAhead*1000 + "ms in the future: " + md_getBufferedAhead()*1000);
 			md_checkBuffering();
+			md_assureSync();
 		}
 	}, (bufferedAhead-1)*1000);
 }
@@ -4250,25 +4249,25 @@ function ex_interpretMetadata() {
 
 class ParseError extends Error {
 	constructor (message, code, object) {
-		self.name = "ParseError";
+		this.name = "ParseError";
 		super (message);
-		self.code = code;
-		self.object = object;
+		this.code = code;
+		this.object = object;
 	}
 }
 class MDError extends Error {
-	constructor (code, message, minor, tagname) {
+	constructor (code, message, minor, tag) {
 		super(message);
-		self.code = code;
-		self.minor = minor;
-		self.tagname = tagname;
+		this.code = code;
+		this.minor = minor;
+		this.tag = tag;
 	}
 }
 class NetworkError extends Error {
 	constructor (response) {
-		self.name = "NetworkError";
+		this.name = "NetworkError";
 		super(response.statusText);
-		self.code = response.status;
+		this.code = response.status;
 	}
 }
 
