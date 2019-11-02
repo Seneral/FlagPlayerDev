@@ -1,4 +1,4 @@
-var VERSION = 2;
+var VERSION = 3;
 var APP_CACHE = "flagplayer-cache-1";
 var IMG_CACHE = "flagplayer-thumbs";
 var MEDIA_CACHE = "flagplayer-media";
@@ -8,7 +8,6 @@ var reMainPage = new RegExp(BASE.replace("/", "\\/") + "(|\\/|\\/index\\.html)(\
 var database;
 var dbLoading = false;
 var dbPromises = [];
-var dbCacheRequest;
 
 // Database access - minimal, no error handling, since it's only readonly and assumes a working database management on the main site
 function db_access() {

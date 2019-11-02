@@ -1173,17 +1173,19 @@ function db_cacheStream () {
 }
 
 function db_deleteCachedStream (videoID) {
-	var cacheWrite = cache.delete(VIRT_CACHE + videoID);
-	var databaseWrite = db_access().then(function () {
-		var dbVideos = db_database.transaction("videos", "readwrite").objectStore("videos");
-		return new Promise (function (resolve, reject) {
-			dbVideos.get(videoID).onsuccess = function (e) {
-				e.target.result.cachedURL = undefined;
-				dbVideos.put(e.target.result).onsuccess = resolve;
-			};
+	return window.caches.open("flagplayer-media")
+	.then (function (cache) {var cacheWrite = cache.delete(VIRT_CACHE + videoID);
+		var databaseWrite = db_access().then(function () {
+			var dbVideos = db_database.transaction("videos", "readwrite").objectStore("videos");
+			return new Promise (function (resolve, reject) {
+				dbVideos.get(videoID).onsuccess = function (e) {
+					e.target.result.cachedURL = undefined;
+					dbVideos.put(e.target.result).onsuccess = resolve;
+				};
+			});
 		});
+		return Promise.all(cacheWrite, databaseWrite);
 	});
-	return Promise.all(cacheWrite, databaseWrite);
 }
 
 //endregion
@@ -3793,7 +3795,7 @@ function onMediaAbort () {
 }
 function onMediaError (error) {
 	if (!error.target || error.target.error.message != "MEDIA_ELEMENT_ERROR: Empty src attribute")  {
-		ct_mediaError(new MDError(error.code, error.message), true, error.target.tagName);
+		ct_mediaError(new MDError(error.code, error.message, true, error.target.tagName));
 	}
 }
 function onMediaStalled () {
