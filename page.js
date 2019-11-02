@@ -709,7 +709,7 @@ function ct_loadMedia () {
 	yt_loadVideoData(yt_videoID, false)
 	// Initiate further control
 	.then(function() {
-		ct_online = false;
+		ct_online = true;
 		if (yt_video.blocked)
 			throw new MDError(11, "Video is blocked in your country!", true);
 		if (yt_video.ageRestricted) 
@@ -1145,7 +1145,7 @@ function db_cacheStream () {
 		.then(function(response) {
 			if (!response.ok)
 				return Promise.reject(new NetworkError ("Failed to cache - response " + response.statusText));
-			console.log("Downloaded video stream! Size: " + ui_formatNumber(response.headers.get("content-length")) + "B");
+			console.log("Downloaded video stream! Size: " + ui_shortenNumber(response.headers.get("content-length")) + "B");
 			
 			// Add to cache
 			var cacheWrite = cache.put(cacheURL, new Response(response.body, {

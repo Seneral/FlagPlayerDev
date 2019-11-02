@@ -76,18 +76,11 @@ self.addEventListener('message', function(event) {
 
 self.addEventListener('fetch', function(event) {
 	var url = event.request.url;
-	if (event.request.headers.get('range')) {
-		var pos = Number(/^bytes\=(\d+)\-$/g.exec(event.request.headers.get('range'))[1]);
-		console.log('Range request for starting position:' + pos + " for stream " + url);
-	}
-	if (url.match(reMainPage)) {
-		// Always use cached app html
+	if (url.match(reMainPage)) { // Always use cached app html
 		event.respondWith(caches.match("./index.html"));
 	}
-	else if (url.includes(VIRT_CACHE)) {
-		// Try to read from the media cache
+	else if (url.includes(VIRT_CACHE)) { // Try to read from the media cache
 		var pos = Number(/^bytes\=(\d+)\-$/g.exec(event.request.headers.get('range'))[1]);
-		console.log('Range request for starting position:', pos);
 		event.respondWith(
 			caches.open("flagplayer-media")
 			.then(function(cache) {
@@ -140,7 +133,7 @@ self.addEventListener('fetch', function(event) {
 						}
 					}
 					return response;
-				});
+				}).catch(function(error) {});
 			})
 		);
 	}
