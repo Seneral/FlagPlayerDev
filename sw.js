@@ -2,6 +2,7 @@ var VERSION = 2;
 var APP_CACHE = "flagplayer-cache-1";
 var IMG_CACHE = "flagplayer-thumbs";
 var MEDIA_CACHE = "flagplayer-media";
+var VIRT_CACHE = "https://flagplayer.seneral.dev/caches/vd-"; // Virtual adress used for caching. Doesn't actually exist, but needs to be https
 var BASE = location.href.substring(0, location.href.lastIndexOf("/"));
 var reMainPage = new RegExp(BASE.replace("/", "\\/") + "(|\\/|\\/index\\.html)(\\?.*)?$")
 var database;
@@ -84,7 +85,7 @@ self.addEventListener('fetch', function(event) {
 		// Always use cached app html
 		event.respondWith(caches.match("./index.html"));
 	}
-	else if (url.includes("/mediacache/vd-")) {
+	else if (url.includes(VIRT_CACHE)) {
 		// Try to read from the media cache
 		var pos = Number(/^bytes\=(\d+)\-$/g.exec(event.request.headers.get('range'))[1]);
 		console.log('Range request for starting position:', pos);
