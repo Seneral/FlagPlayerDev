@@ -802,6 +802,7 @@ function ct_mediaReady () {
 	ui_updatePlayerState();
 }
 function ct_mediaError (error) {
+	clearTimeout(md_timerCheckBuffering);
 	if (error instanceof MDError && error.tag && error.tag.src.startsWith(VIRT_CACHE)) {
 		console.error("Cached media file erroneous! Removing from cache. ", error);
 		db_deleteCachedStream(yt_videoID).then (function () {
