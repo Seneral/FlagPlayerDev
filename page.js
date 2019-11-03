@@ -792,7 +792,7 @@ function ct_mediaLoaded () {
 		if (ct_paused) ct_state = State.PreStart;
 		else ct_state = State.Loading; // Stay in Loading until video actually starts
 		ct_totalTime = yt_video.meta.length;
-		ct_curTime = parseInt(new URL(window.location.href).searchParams.get("t"));
+		ct_curTime = parseInt(new URL(window.location.href).searchParams.get("t")) || 0;
 		ui_updateTimelineProgress();
 		md_updateStreams(); // Fires ct_mediaReady or ct_mediaError eventually
 	}
