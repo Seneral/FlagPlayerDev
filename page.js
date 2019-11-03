@@ -741,10 +741,8 @@ function ct_loadMedia () {
 				ct_mediaLoaded();
 			};
 			var skipVideo = function () {
-				ct_mediaError(new MDError(14, "Offline", true));
-				ct_mediaLoaded();
 				ct_online = false;
-				ct_startAutoplay(8); // Will choose among cached videos only
+				ct_mediaError(new MDError(14, "Offline", false));
 			};
 			if (yt_video.cached) {
 				if (yt_video.cachedURL != undefined) useCache();
@@ -762,7 +760,6 @@ function ct_loadMedia () {
 				ct_updatePageState();
 			}
 			ct_mediaError(error);
-			ct_mediaLoaded();
 		}
 	});
 
