@@ -1185,6 +1185,7 @@ function db_deleteCachedStream (cacheID) {
 			return new Promise (function (resolve, reject) {
 				dbVideos.get(cacheID).onsuccess = function (e) {
 					e.target.result.cachedURL = undefined;
+					if (yt_video.videoID == cacheID) yt_video.cachedURL = undefined;
 					dbVideos.put(e.target.result).onsuccess = resolve;
 				};
 			});
