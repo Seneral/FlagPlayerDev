@@ -709,6 +709,7 @@ function ct_loadMedia () {
 	yt_loadVideoData(yt_videoID, false)
 	// Initiate further control
 	.then(function() {
+		ui_setVideoMetadata();
 		ct_online = true;
 		if (yt_video.blocked)
 			throw new MDError(11, "Video is blocked in your country!", false);
@@ -2686,8 +2687,6 @@ function ui_resetStreams () {
 /* -------------------- */
 
 function ui_setVideoMetadata() {
-	if (!yt_video.loaded && !yt_video.cached)
-		return;
 	sec_video.style.display = "block";
 	I("vdTitle").innerText = yt_video.meta.title;
 	I("vdViews").innerText = ui_formatNumber(yt_video.meta.views) + " views";
