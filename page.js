@@ -709,7 +709,6 @@ function ct_loadMedia () {
 	yt_loadVideoData(yt_videoID, false)
 	// Initiate further control
 	.then(function() {
-		ui_setVideoMetadata();
 		ct_online = true;
 		if (yt_video.blocked)
 			throw new MDError(11, "Video is blocked in your country!", false);
@@ -721,6 +720,7 @@ function ct_loadMedia () {
 
 		ct_mediaLoaded();
 		ct_updatePageState();
+		ui_setVideoMetadata();
 		ui_setupMediaSession();
 		// Related Videos
 		ui_addRelatedVideos(0);
@@ -734,6 +734,9 @@ function ct_loadMedia () {
 	// Handle different errors while loading
 	.catch(function(error) {
 		if (!error) return; // Silent fail when request has gone stale (new page loaded before this finished)
+		ct_mediaLoaded();
+		ct_updatePageState();
+		ui_setVideoMetadata();
 		if ((error.name == "TypeError" && error.message.includes("fetch")) || error instanceof NetworkError) {
 			var useCache = function () {
 				console.log("Offline - Cache Fallback!");
@@ -743,7 +746,6 @@ function ct_loadMedia () {
 			var skipVideo = function () {
 				ct_online = false;
 				ct_mediaError(new MDError(14, "Offline", false));
-				ct_mediaLoaded();
 			};
 			if (yt_video.cached) {
 				if (yt_video.cachedURL != undefined) useCache();
@@ -756,12 +758,12 @@ function ct_loadMedia () {
 			}
 		}
 		else {
-			if (yt_video.meta) {
-				ui_setVideoMetadata();
-				ct_updatePageState();
-			}
 			ct_mediaError(error);
-			ct_mediaLoaded();
+			if (error instanceof MDError) { // Loaded metadata but not ready (streams unavailable)
+				ct_mediaLoaded();
+				ct_updatePageState();
+				ui_setVideoMetadata();
+			}
 		}
 	});
 
