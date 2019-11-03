@@ -721,7 +721,6 @@ function ct_loadMedia () {
 
 		ct_mediaLoaded();
 		ct_updatePageState();
-		ui_setVideoMetadata();
 		ui_setupMediaSession();
 		// Related Videos
 		ui_addRelatedVideos(0);
@@ -744,6 +743,7 @@ function ct_loadMedia () {
 			var skipVideo = function () {
 				ct_online = false;
 				ct_mediaError(new MDError(14, "Offline", false));
+				ct_mediaLoaded();
 			};
 			if (yt_video.cached) {
 				if (yt_video.cachedURL != undefined) useCache();
@@ -761,6 +761,7 @@ function ct_loadMedia () {
 				ct_updatePageState();
 			}
 			ct_mediaError(error);
+			ct_mediaLoaded();
 		}
 	});
 
@@ -784,15 +785,15 @@ function ct_mediaLoad () {
 function ct_mediaLoaded () {
 	yt_video.loaded = true;
 	if (ct_state != State.Error) {
+		yt_video.ready = true;
 		ui_setStreams();
 		if (ct_paused) ct_state = State.PreStart;
 		else ct_state = State.Loading; // Stay in Loading until video actually starts
 		ct_totalTime = yt_video.meta.length;
-		ct_curTime = yt_parseNum(new URL(window.location.href).searchParams.get("t"));
+		ct_curTime = parseInt(new URL(window.location.href).searchParams.get("t"));
 		ui_updateTimelineProgress();
 		md_updateStreams(); // Fires ct_mediaReady or ct_mediaError eventually
 	}
-	ui_updatePlayerState();
 }
 function ct_mediaReady () {
 	ct_flags.buffering = false;
@@ -1131,7 +1132,7 @@ function db_getVideo (videoID) {
 /* ------------------------------------------------- */
 
 function db_cacheStream () {
-	if (!yt_video.loaded) return Promise.reject();
+	if (!yt_video.ready) return Promise.reject();
 	if (!ct_sources || !ct_sources.audio) return Promise.reject();
 	if (!("serviceWorker" in navigator) || !sw_current) {
 		console.error("Service Worker required in order to cache videos!");
@@ -2464,7 +2465,7 @@ function ui_updateStreamState (selectedStreams) {
 			(isNaN(parseInt(ct_pref.dashAudio))? ct_pref.dashAudio: selectedStreams.dashAudio.aBR);
 		I("select_legacy").value = !selectedStreams.dashAudio? "NONE" : 
 			(isNaN(parseInt(ct_pref.legacyVideo))? ct_pref.legacyVideo : selectedStreams.legacyVideo.vResY);
-	} else if (yt_video && yt_video.loaded) {
+	} else if (yt_video && yt_video.ready) {
 		// Triggered by changes to selectableStreams (streams were deemed unavailable)
 		var dropdown = I("select_dashVideo");
 		[].forEach.call(dropdown.options, o => {
@@ -2687,6 +2688,7 @@ function ui_resetStreams () {
 /* -------------------- */
 
 function ui_setVideoMetadata() {
+	if (!yt_video.cached && !yt_video.loaded) return;
 	sec_video.style.display = "block";
 	I("vdTitle").innerText = yt_video.meta.title;
 	I("vdViews").innerText = ui_formatNumber(yt_video.meta.views) + " views";
@@ -3855,7 +3857,7 @@ function md_daVal (s) { return s.aBR; }
 function md_lvVal (s) { return s.vResY; }
 
 function md_selectableStreams () {
-	if (!yt_video || !yt_video.loaded) return undefined;
+	if (!yt_video || !yt_video.ready) return undefined;
 	// Return streams available in each category sorted from best to worst
 	var streams = {};
 	streams.dashVideo = yt_video.streams
@@ -3870,7 +3872,7 @@ function md_selectableStreams () {
 	return streams;
 }
 function md_selectStreams () {
-	if (!yt_video || !yt_video.loaded) return undefined;
+	if (!yt_video || !yt_video.ready) return undefined;
 	// Return the selected stream in each category according to preferences
 	var select = function (s, pref, value, sec) { // SECondary selector, f.E. container
 		if (pref == "NONE" || s.length == 0) return undefined;
@@ -3889,7 +3891,7 @@ function md_selectStreams () {
 	return streams;
 }
 function md_updateStreams ()  {
-	if (!yt_video || !yt_video.loaded) {
+	if (!yt_video || !yt_video.ready) {
 		ct_sources = undefined;
 		return;
 	}
