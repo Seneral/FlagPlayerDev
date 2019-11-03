@@ -4189,8 +4189,8 @@ function md_assureSync () {
 
 class ParseError extends Error {
 	constructor (message, code, object) {
-		this.name = "ParseError";
 		super (message);
+		this.name = "ParseError";
 		this.code = code;
 		this.object = object;
 	}
@@ -4205,8 +4205,8 @@ class MDError extends Error {
 }
 class NetworkError extends Error {
 	constructor (response) {
-		this.name = "NetworkError";
 		super(response.statusText);
+		this.name = "NetworkError";
 		this.code = response.status;
 	}
 }
