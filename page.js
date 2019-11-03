@@ -744,7 +744,7 @@ function ct_loadMedia () {
 				ct_mediaError(new MDError(14, "Offline", true));
 				ct_mediaLoaded();
 				ct_online = false;
-				setTimeout(ct_startAutoplay, 1000);
+				ct_startAutoplay(8); // Will choose among cached videos only
 			};
 			if (yt_video.cached) {
 				if (yt_video.cachedURL != undefined) useCache();
@@ -813,7 +813,7 @@ function ct_mediaError (error) {
 				ui_updateStreamState();
 			}
 			else { // Next cached video
-				ct_startAutoplay();
+				ct_startAutoplay(8);
 			}
 		});
 		error.minor = true; // assume minor
@@ -834,7 +834,7 @@ function ct_mediaError (error) {
 	ui_updatePlayerState();
 
 	if (error instanceof MDError && !error.minor)
-		ct_startAutoplay();
+		ct_startAutoplay(8);
 
 	console.error(error.message + " (" + error.name + (error.code? " " + error.code : "") + ")" + (error.tagname? " in " + error.tagname : ""));
 }
@@ -918,14 +918,16 @@ function ct_endSeeking () {
 	ct_flags.seeking = false;
 	md_checkBuffering ();
 }
-function ct_startAutoplay () {
-	if (yt_playlist) { // Silent 1s, can still be interruped by seeking
-		clearTimeout(ct_timerAutoplay);
-		ct_timerAutoplay = setTimeout (ct_nextVideo, 1000);
-	} else if (ct_pref.autoplay) {
-		clearTimeout(ct_timerAutoplay);
-		ct_timerAutoplay = setTimeout (ct_nextVideo, 8000);
-		setDisplay("nextLoadIndicator", "block"); // Hardcoded to 8s
+function ct_startAutoplay (timeout) {
+	clearTimeout(ct_timerAutoplay);
+	if (timeout == undefined) {
+		if (yt_playlist) timeout = 1;
+		else if (ct_pref.autoplay) timeout = 8;
+	}
+	if (timeout != undefined) {
+		ct_timerAutoplay = setTimeout (ct_nextVideo, timeout * 1000);
+		if (timeout == 8) // Hardcoded to 8s
+			setDisplay("nextLoadIndicator", "block");
 	}
 }
 function ct_stopAutoplay () {
