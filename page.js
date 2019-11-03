@@ -820,7 +820,7 @@ function ct_mediaError (error) {
 	}
 	else if (error instanceof MDError && error.code == 4) {
 		console.error("Can't play selected stream!");
-		var stream = yt_video.streams.find(s => s.url == error.target.src);
+		var stream = yt_video.streams.find(s => s.url == error.tag.src);
 		if (stream) unavailable = true;
 		md_updateStreams();
 		ui_updateStreamState();
@@ -3911,6 +3911,7 @@ function md_updateStreams ()  {
 	if ((videoMedia.src != ct_sources.video && ct_sources.video) || (audioMedia.src != ct_sources.audio && ct_sources.audio)) {
 		// One stream will need buffering after change
 		videoMedia.pause(); audioMedia.pause();
+		ui_updateTimelineBuffered();
 	}
 	if (videoMedia.src != ct_sources.video) loadStream(videoMedia, ct_sources.video);
 	if (audioMedia.src != ct_sources.audio) loadStream(audioMedia, ct_sources.audio);
@@ -4133,20 +4134,17 @@ function md_forceStartMedia() {
 }
 function md_assureBuffer () {
 	clearTimeout(md_timerCheckBuffering);
-	bufferedAhead = md_getBufferedAhead();
+	var bufferedAhead = md_getBufferedAhead();
 	md_timerCheckBuffering = setTimeout(function () {
-		if (ct_state == State.Started && !ct_flags.buffering) {
-			//console.log(bufferedAhead*1000 + "ms in the future: " + md_getBufferedAhead()*1000);
+		if (ct_state == State.Started && !ct_flags.buffering)
 			md_checkBuffering();
-			md_assureSync();
-		}
 	}, (bufferedAhead-1)*1000);
 }
 function md_assureSync () {
 	clearTimeout(md_timerSyncMedia);
 	if (ct_sources && ct_sources.video && ct_sources.audio && !md_attemptPlayStarted) {
 		var syncTimes = function (syncSignificance) {
-			if (ct_sources && ct_sources.video && ct_sources.audio) {
+			if (ct_sources && ct_sources.video && ct_sources.audio && !md_attemptPlayStarted) {
 				if (ct_isPlaying()) {
 					var timeDiff = audioMedia.currentTime-videoMedia.currentTime;
 					var timeDiffLabel = (timeDiff*1000-(timeDiff*1000)%1) + "ms";
@@ -4155,7 +4153,11 @@ function md_assureSync () {
 						console.info("MD: Sync Error: " + timeDiffLabel + " - Fixing!");
 						md_checkBuffering(); // Incase video was hidden (diff multiple seconds), video might not have been buffered
 						if (!ct_flags.buffering) md_timerSyncMedia = setTimeout(() => syncTimes(syncSignificance + 0.05), 1000*(syncSignificance + 0.1));
-					} else console.info("MD: Sync Error: " + timeDiffLabel + "!");
+					} else {
+						console.info("MD: Sync Error: " + timeDiffLabel + "!");
+						// Setup regular sync checks based on buffering to reduce risk of late sync of several seconds into unbuffered areas
+						md_timerSyncMedia = setTimeout(() => syncTimes(0.05), Math.max(5000, Math.min(md_getBufferedAhead()/2, 30000)));
+					}
 				} else {
 					videoMedia.currentTime = ct_curTime;
 					audioMedia.currentTime = ct_curTime;
@@ -4175,10 +4177,29 @@ function md_assureSync () {
 
 //region
 
-
-/* -------------------- */
-/* ---- REQUESTS ------ */
-/* -------------------- */
+class ParseError extends Error {
+	constructor (message, code, object) {
+		this.name = "ParseError";
+		super (message);
+		this.code = code;
+		this.object = object;
+	}
+}
+class MDError extends Error {
+	constructor (code, message, minor, tag) {
+		super(message);
+		this.code = code;
+		this.minor = minor;
+		this.tag = tag;
+	}
+}
+class NetworkError extends Error {
+	constructor (response) {
+		this.name = "NetworkError";
+		super(response.statusText);
+		this.code = response.status;
+	}
+}
 
 // Just a wrapper to facilitate paged requests
 function PAGED_REQUEST (pagedContent, method, url, authenticate, callback, supressLoader) {
@@ -4246,31 +4267,6 @@ function ex_interpretMetadata() {
 		} catch(e) { console.warn("Experimental metadata detection failed!"); }
 	}
 }
-
-class ParseError extends Error {
-	constructor (message, code, object) {
-		this.name = "ParseError";
-		super (message);
-		this.code = code;
-		this.object = object;
-	}
-}
-class MDError extends Error {
-	constructor (code, message, minor, tag) {
-		super(message);
-		this.code = code;
-		this.minor = minor;
-		this.tag = tag;
-	}
-}
-class NetworkError extends Error {
-	constructor (response) {
-		this.name = "NetworkError";
-		super(response.statusText);
-		this.code = response.status;
-	}
-}
-
 
 /* -------------------- */
 /* ---- HTML BIN ------ */
@@ -4418,14 +4414,9 @@ function ht_appendCommentElement (container, commentID, authorNav, authorIMG, au
 	return container.lastElementChild;
 }
 
-//endregion
-
-
-/* -------------------------------------------------------------------------------------------------------------- */
-/* ----------------- DATA --------------------------------------------------------------------------------------- */
-/* -------------------------------------------------------------------------------------------------------------- */
-
-//region
+/* -------------------- */
+/* ---- DATA ---------- */
+/* -------------------- */
 
 var ITAGS = {
 // LEGACY Streams
