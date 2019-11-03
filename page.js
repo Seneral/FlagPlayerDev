@@ -4155,9 +4155,7 @@ function md_assureSync () {
 						if (!ct_flags.buffering) md_timerSyncMedia = setTimeout(() => syncTimes(syncSignificance + 0.05), 1000*(syncSignificance + 0.1));
 					} else { // Setup regular sync checks based on buffering to reduce risk of late sync of several seconds into unbuffered areas
 						//console.info("MD: Sync Error: " + timeDiffLabel + "!");
-						var bufferedAhead = md_getBufferedAhead();
-						var time = Math.max(5000, Math.min(bufferedAhead*1000/2, 30000));
-						md_timerSyncMedia = setTimeout(() => syncTimes(0.05),time);
+						md_timerSyncMedia = setTimeout(() => syncTimes(0.05), Math.max(5000, Math.min(md_getBufferedAhead()*1000/2, 30000)));
 					}
 				} else {
 					videoMedia.currentTime = ct_curTime;
