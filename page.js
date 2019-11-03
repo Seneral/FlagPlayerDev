@@ -896,7 +896,10 @@ function ct_mediaPlayPause (value, indirect) {
 			if (ct_state == State.Ended) ct_curTime = 0;
 			ct_state = State.Started;
 			md_updateStreams();
-			if (ct_state == State.Error) return;
+			if (ct_state == State.Error) {
+				ct_stopAutoplay();
+				return;
+			}
 			if (indirect) ui_indicatePlay();
 		}
 	}
