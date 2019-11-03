@@ -821,7 +821,7 @@ function ct_mediaError (error) {
 	else if (error instanceof MDError && error.code == 4) {
 		console.error("Can't play selected stream!");
 		var stream = yt_video.streams.find(s => s.url == error.tag.src);
-		if (stream) unavailable = true;
+		if (stream) stream.unavailable = true;
 		md_updateStreams();
 		ui_updateStreamState();
 		return;
@@ -2465,7 +2465,8 @@ function ui_updateStreamState (selectedStreams) {
 		// Triggered by changes to selectableStreams (streams were deemed unavailable)
 		var dropdown = I("select_dashVideo");
 		[].forEach.call(dropdown.options, o => {
-			if (!isNaN(parseInt(o.value)) && yt_video.streams.findIndex(s => s.isDash && s.hasVideo && !s.unavailable && s.vResY*100+s.vFPS == o.value) == -1)
+			if (!isNaN(parseInt(o.value)) && !o.label.endsWith("!") && 
+				yt_video.streams.findIndex(s => s.isDash && s.hasVideo && !s.unavailable && s.vResY*100+s.vFPS == o.value) == -1)
 				o.label += " !";
 		});
 	}
