@@ -820,7 +820,6 @@ function ct_mediaError (error) {
 		var stream = yt_video.streams.find(s => s.url == error.tag.src);
 		if (stream) stream.unavailable = true;
 		md_updateStreams();
-		ui_updateStreamState();
 		return;
 	}
 	md_resetStreams();
