@@ -711,11 +711,11 @@ function ct_loadMedia () {
 	.then(function() {
 		ct_online = true;
 		if (yt_video.blocked)
-			throw new MDError(11, "Video is blocked in your country!", true);
+			throw new MDError(11, "Video is blocked in your country!", false);
 		if (yt_video.ageRestricted) 
-			throw new MDError(12, "Video is age restricted!", true);
+			throw new MDError(12, "Video is age restricted!", false);
 		if (yt_video.status != "OK") 
-			throw new MDError(13, "Playability Status: " + yt_video.status, true);
+			throw new MDError(13, "Playability Status: " + yt_video.status, false);
 		console.log("YT Video:", yt_video);
 
 		ct_mediaLoaded();
