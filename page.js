@@ -734,9 +734,6 @@ function ct_loadMedia () {
 	// Handle different errors while loading
 	.catch(function(error) {
 		if (!error) return; // Silent fail when request has gone stale (new page loaded before this finished)
-		ct_mediaLoaded();
-		ct_updatePageState();
-		ui_setVideoMetadata();
 		if ((error.name == "TypeError" && error.message.includes("fetch")) || error instanceof NetworkError) {
 			var useCache = function () {
 				console.log("Offline - Cache Fallback!");
@@ -1843,6 +1840,9 @@ function yt_loadVideoData(id, background) {
 			return yt_decodeStreams(page.config)
 			.then (function (streams) {
 				video.streams = streams;
+				return page;
+			}).catch (function () {
+				video.streams = [];
 				return page;
 			});
 			
