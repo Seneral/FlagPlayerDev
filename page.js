@@ -3991,7 +3991,7 @@ function md_checkBuffering(forceBuffer) {
 	if (md_attemptPlayStarted) return;
 	if (!ct_sources) return;
 	if (!ct_sources.video && !ct_sources.audio) {
-		console.error("Sources not yet loaded");
+		ct_mediaError(new MDError(15, "No media sources available!", false));
 		return;
 	}
 	if (ct_paused || ct_flags.buffering) { // Assure times are synced
