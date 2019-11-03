@@ -4106,7 +4106,7 @@ function md_forceStartMedia() {
 			} else if (!attemptError instanceof DOMException) {
 				console.error("--- Failed to start media playback!");
 				ct_mediaError(attemptError);
-				setTimeout(md_checkStartMedia, 500);
+				setTimeout(md_checkStartMedia, 1000);
 			} else if (!attemptAborted) {
 				setTimeout(md_checkStartMedia, 500);
 			}
@@ -4153,10 +4153,11 @@ function md_assureSync () {
 						console.info("MD: Sync Error: " + timeDiffLabel + " - Fixing!");
 						md_checkBuffering(); // Incase video was hidden (diff multiple seconds), video might not have been buffered
 						if (!ct_flags.buffering) md_timerSyncMedia = setTimeout(() => syncTimes(syncSignificance + 0.05), 1000*(syncSignificance + 0.1));
-					} else {
-						console.info("MD: Sync Error: " + timeDiffLabel + "!");
-						// Setup regular sync checks based on buffering to reduce risk of late sync of several seconds into unbuffered areas
-						md_timerSyncMedia = setTimeout(() => syncTimes(0.05), Math.max(5000, Math.min(md_getBufferedAhead()/2, 30000)));
+					} else { // Setup regular sync checks based on buffering to reduce risk of late sync of several seconds into unbuffered areas
+						//console.info("MD: Sync Error: " + timeDiffLabel + "!");
+						var bufferedAhead = md_getBufferedAhead();
+						var time = Math.max(5000, Math.min(bufferedAhead*1000/2, 30000));
+						md_timerSyncMedia = setTimeout(() => syncTimes(0.05),time);
 					}
 				} else {
 					videoMedia.currentTime = ct_curTime;
