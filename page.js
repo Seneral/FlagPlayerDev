@@ -1171,7 +1171,7 @@ function db_cacheStream () {
 				});
 			});
 
-			return Promise.all(cacheWrite, databaseWrite);
+			return Promise.all([cacheWrite, databaseWrite]);
 		});
 	});
 }
@@ -1189,7 +1189,7 @@ function db_deleteCachedStream (cacheID) {
 				};
 			});
 		});
-		return Promise.all(cacheWrite, databaseWrite);
+		return Promise.all([cacheWrite, databaseWrite]);
 	});
 }
 
@@ -4092,16 +4092,16 @@ function md_forceStartMedia() {
 		audioMedia.pause();
 	}, 500);
 	var attemptFinally = function() {
+		md_attemptPlayStarted = false;
 		if (timeout) {
 			ct_curTime = time;
+			md_pause();
 			if (!md_attemptPause)
 				setTimeout(md_checkStartMedia, 500);
 			md_attemptPause = false;
-			md_attemptPlayStarted = false;
 			return;
 		} // Leftover promise call after timeout
 		clearTimeout(attemptTimeout);
-		md_attemptPlayStarted = false;
 		if (md_attemptPause) {
 			md_pause();
 			md_attemptPause = false;
