@@ -935,6 +935,7 @@ function ct_startAutoplay (timeout) {
 	}
 }
 function ct_stopAutoplay () {
+	setDisplay("nextLoadIndicator", "none");
 	clearTimeout(ct_timerAutoplay);
 }
 
