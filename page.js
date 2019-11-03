@@ -894,9 +894,9 @@ function ct_mediaPlayPause (value, indirect) {
 			if (indirect) ui_indicatePause();
 		} else {
 			if (ct_state == State.Ended) ct_curTime = 0;
-			if (ct_state == State.Error) md_updateStreams();
-			else md_checkStartMedia();
 			ct_state = State.Started;
+			md_updateStreams();
+			if (ct_state == State.Error) return;
 			if (indirect) ui_indicatePlay();
 		}
 	}
