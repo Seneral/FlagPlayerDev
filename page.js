@@ -3907,6 +3907,10 @@ function md_updateStreams ()  {
 		ct_sources.video = selectedStreams.legacyVideo? selectedStreams.legacyVideo.url : '';
 		ct_sources.audio = '';
 	}
+	if (!ct_sources.video && !ct_sources.audio) {
+		ct_mediaError(new MDError(15, "No media sources available!", false));
+		return;
+	}
 	ui_updateStreamState(selectedStreams);
 	// Trigger reload
 	if ((videoMedia.src != ct_sources.video && ct_sources.video) || (audioMedia.src != ct_sources.audio && ct_sources.audio)) {
