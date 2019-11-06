@@ -563,9 +563,6 @@ body {
 
 .playlistList, .videoList {
 }
-.playlistList *, .videoList * {
-	overflow: hidden;
-}
 .playlistList .liElement, .videoList .liElement {
 	height: 81px;
 }

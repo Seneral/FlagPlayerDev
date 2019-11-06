@@ -376,6 +376,7 @@ function ct_readParameters () {
 }
 function ct_resetContent () {
 	ct_page = Page.None;
+	ct_view = undefined;
 	// Discard main content (not including playlist)
 	ct_resetSearch();
 	ct_resetChannel();
@@ -4408,21 +4409,20 @@ function ht_clearVideoPlaceholder (element) {
 function ht_appendVideoElement (container, index, id, length, prim, sec, tert, contextData) {
 	container.insertAdjacentHTML ("beforeEnd",
 		'<div class="liElement" videoID="' + id + '">' + 
-			'<a class="overlayLink" navigation="v=' + id + '" href="' + ct_getNavLink("v=" + id) + '"></a>' + 
 (index == undefined?	'' :
 			'<div class="liIndex">' + index + '</div>') + 
-			'<div class="liThumbnail">' + 
+			'<a class="liThumbnail" navigation="v=' + id + '" href="' + ct_getNavLink("v=" + id) + '">' + 
 				'<img class="liThumbnailImg" src="' + HOST_YT_IMG +  id + '/default.jpg">' +
 				'<span class="liThumbnailInfo"> ' +  length + ' </span>' +
-			'</div>' + 
-			'<div class="liDetail selectable">' + 
+			'</a>' + 
+			'<a class="liDetail navigation="v=' + id + '" href="' + ct_getNavLink("v=" + id) + '">' + 
 				'<span class="twoline liPrimary">' + prim + '</span>' +
 				'<span class="oneline liSecondary">' + sec + '</span>' +
 (tert == undefined?	'' :
 				'<span class="oneline liTertiary">' + tert + '</span>') +
-			'</div>' + 
+			'</a>' + 
 (contextData == undefined? '' :
-			'<button class="liAction script dropdown left down ' + (contextData.class || '') + '" id="' + (contextData.id || '') + '">' + 
+			'<button class="liAction script dropdown left ' + (contextData.class || '') + '" id="' + (contextData.id || '') + '">' + 
 				'<svg viewBox="6 6 36 36" class="icon"><use href="#svg_vdots"/></svg>' +
 				'<div class="dropdownContent">' +
 					contextData.entries.join("") +
