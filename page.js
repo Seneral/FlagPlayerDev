@@ -1197,7 +1197,7 @@ function db_cacheStream () {
 				return Promise.reject(new NetworkError ("Failed to cache - response " + response.statusText));
 
 			cacheObj.size = response.headers.get("content-length");
-			console.log("Downloaded video stream! Size: " + ui_shortenBytes(cacheObj.size) + "B");
+			console.log("Downloaded video stream! Size: " + ui_shortenBytes(cacheObj.size));
 			
 			// Add to cache
 			var cacheWrite = cache.put(cacheObj.url, new Response(response.body, {
@@ -2605,7 +2605,7 @@ function ui_formatTimeText (time) {
 	return (hrs > 0? (hrs + ":") : "") + (hrs > 0 && posMin < 10? "0" : "") + posMin + ":" + (posSec < 10? "0" : "") + posSec;
 }
 function ui_shortenBytes (num) {
-	return ui_shortenNumber(num, "GMK");
+	return ui_shortenNumber(num, "GMK") + "B";
 }
 function ui_shortenNumber (num, bmk) {
 	if (!bmk) bmk = "BMK";
@@ -2710,23 +2710,24 @@ function ui_resetHome () {
 
 function ui_setupCache () {
 	if (ct_page != Page.Cache) return;
-
-	I("cacheAmount").innerText = db_cachedVideos.length + " videos";
+	I("cacheAmount").innerText = db_cachedVideos.length;
 	if ("storage" in navigator) {
 		navigator.storage.estimate().then(function(estimate) {
-			I("cacheQuota").innerText = ui_shortenBytes(estimate.usage) + "B / " + ui_shortenBytes(estimate.quota) + "B";
-		}).catch(function() {
-			I("cacheQuota").innerText = "Failed usage";
-		});
-	}
-	else {
-		I("cacheQuota").innerText = "Unknown usage";
-	}
-
+			I("cacheQuota").innerText = ui_shortenBytes(estimate.usage) + " / " + ui_shortenBytes(estimate.quota) + "";
+		}).catch(function() { I("cacheQuota").innerText = "Unknown usage"; });
+	} else I("cacheQuota").innerText = "Unknown usage";
 	var cachedVideoList = I("cacheVideoList");
 	cachedVideoList.innerHTML = "";
 	db_cachedVideos.forEach(function (v) {
-		ht_appendVideoElement(cachedVideoList, undefined, v.videoID, ui_formatTimeText(v.length), v.title, v.uploader.name, v.cache.size);
+		ht_appendVideoElement(cachedVideoList, undefined, v.videoID, ui_formatTimeText(v.length), v.title, v.uploader.name, ui_shortenBytes(v.cache.size), {
+			class: "cacheVideoContext",
+			entries: ['<span tabindex="0" value="cacheDelete-' + v.videoID + '">Delete Cache</span>'],
+		});
+	});
+	ui_setupDropdowns();
+	var cacheContext = document.getElementsByClassName("cacheVideoContext");
+	[].forEach.call(cacheContext, function (d) {
+		d.onchange = onSelectContextAction;
 	});
 	sec_cache.style.display = "block";
 }
@@ -3245,9 +3246,7 @@ function ui_setupDropdowns () {
 	});
 
 	var toggleDropdowns = document.getElementsByClassName("dropdown toggle");
-	[].forEach.call(toggleDropdowns, function (d) {
-		onToggleButton(d);
-	});
+	[].forEach.call(toggleDropdowns, onToggleButton);
 }
 function ui_fillCategoryFilter (categories) {
 	categories.container.innerHTML = "";
@@ -3674,9 +3673,10 @@ function onSelectStreams () {
 }
 function onSelectContextAction (selectedValue, dropdownElement, selectedElement) {
 	var selectedValue = selectedValue || "";
-	if (selectedValue == "top") yt_loadTopComments();
-	else if (selectedValue == "new") yt_loadNewComments();
+	if (selectedValue == "cmTop") yt_loadTopComments();
+	else if (selectedValue == "cmNew") yt_loadNewComments();
 	else if (selectedValue == "cache") db_cacheStream().catch(function(){});
+	else if (selectedValue.startsWith("cacheDelete-")) db_deleteCachedStream(selectedValue.substring(12)).catch(function(){});
 }
 function onLoadReplies (container, commentID) {
 	var comment = yt_video.comments.comments.find(c => c.id == commentID);
@@ -4405,7 +4405,7 @@ function ht_clearVideoPlaceholder (element) {
 	}
 	return element;
 }
-function ht_appendVideoElement (container, index, id, length, prim, sec, tert) {
+function ht_appendVideoElement (container, index, id, length, prim, sec, tert, contextData) {
 	container.insertAdjacentHTML ("beforeEnd",
 		'<div class="liElement" videoID="' + id + '">' + 
 			'<a class="overlayLink" navigation="v=' + id + '" href="' + ct_getNavLink("v=" + id) + '"></a>' + 
@@ -4421,6 +4421,13 @@ function ht_appendVideoElement (container, index, id, length, prim, sec, tert) {
 (tert == undefined?	'' :
 				'<span class="oneline liTertiary">' + tert + '</span>') +
 			'</div>' + 
+(contextData == undefined? '' :
+			'<button class="liAction script dropdown left down ' + (contextData.class || '') + '" id="' + (contextData.id || '') + '">' + 
+				'<svg viewBox="6 6 36 36" class="icon"><use href="#svg_vdots"/></svg>' +
+				'<div class="dropdownContent">' +
+					contextData.entries.join("") +
+				'</div>' +
+			'</button>') + 
 		'</div>');
 	return container.lastElementChild;
 }
