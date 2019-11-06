@@ -207,6 +207,7 @@ body {
 	flex-shrink: 1;
 	max-width: 35%;
 	margin: 1em;
+	width: 30em; 
 }
 .desktopLayout .section.side { 
 	width: 30em; 
@@ -652,6 +653,11 @@ body {
 
 
 /* --------------------------- */
+/* ---- CACHE ---------------- */
+/* --------------------------- */
+
+
+/* --------------------------- */
 /* ---- VIDEO DETAIL --------- */
 /* --------------------------- */
 
@@ -832,11 +838,6 @@ body {
 /* --------------------------- */
 /* Standard Videolist */
 .section.search {}
-.scActionBar {
-	margin-bottom: 1em;
-	border-bottom: 1px solid var(--bg-acc-color);
-	height: 2em;
-}
 
 /* --------------------------- */
 /* ---- CHANNEL -------------- */
@@ -1296,6 +1297,11 @@ button.contentLoader, span.contentLoader, button.collapser, span.collapser {
 .actionBar.right {
 	flex-direction: row-reverse;
 }
+.actionBar.headerBar {
+	margin-bottom: 1em;
+	border-bottom: 1px solid var(--bg-acc-color);
+	height: 2em;
+}
 .barAction {
 	display: inline-block;
 	height: 100%;
@@ -1303,11 +1309,13 @@ button.contentLoader, span.contentLoader, button.collapser, span.collapser {
 .barAction span {
 	line-height: 1.5em;
 }
-.barLabel {
+.barLabel, .barText {
 	display: inline-block;
 	line-height: 2em;
 	color: var(--txt-sec-color);
 	padding: 0 0.5em;
+}
+.barLabel {
 	font-weight: bolder;
 }
 /* Variation: Context */
