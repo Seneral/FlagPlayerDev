@@ -371,7 +371,6 @@ function ct_readParameters () {
 	// Validate parameters
 	if (yt_videoID && yt_videoID.length != 11) yt_videoID = undefined;
 	if (!yt_channelID.user && (!yt_channelID.channel || yt_channelID.channel.length != 24 || !yt_channelID.channel.startsWith("UC"))) yt_channelID = undefined;
-	if (yt_playlistID && yt_playlistID.length != 34) yt_playlistID = undefined;
 	yt_searchTerms = yt_searchTerms? decodeURIComponent(yt_searchTerms) : undefined;
 }
 function ct_resetContent () {
@@ -626,7 +625,7 @@ function ct_getVideoPlIndex () { // Return -1 on fail so that pos+1 will be 0
 /* -------------------- */
 
 function ct_navSearch(searchTerms) {
-	var plMatch = searchTerms.match(/(PL[a-zA-Z0-9_-]{32})/);
+	var plMatch = searchTerms.match(/(PL[a-zA-Z0-9_-]{32})/) || searchTerms.match(/list=([a-zA-Z0-9_-]{20,})(?:&|$)/) || searchTerms.match(/^([A-Z]{2}[a-zA-Z0-9_-]{20,})$/);
 	var vdMatch = searchTerms.match(/v=([a-zA-Z0-9_-]{11})/);
 	if (plMatch) ct_loadPlaylist(plMatch[1]);
 	if (!plMatch || vdMatch) {
@@ -733,7 +732,7 @@ function ct_loadMedia () {
 			dislikes: video.dislikes,
 		};
 		ui_setVideoMetadata();
-	});
+	}).catch(function() {});
 	// Load, parse and display online video data
 	yt_loadVideoData(yt_videoID, false)
 	// Initiate further control
@@ -984,7 +983,7 @@ function db_access () {
 		db_loading = true;
 		// Error handler:
 		var error = function (error) { // Setup database-wide error handling
-			console.error("Database Error:", error.message);
+			console.error("Database Error:", error.target.error.message);
 			db_accessCallbacks.forEach((p) => p.reject());
 			db_accessCallbacks = [];
 		}
@@ -1234,7 +1233,7 @@ function db_deleteCachedStream (cacheID) {
 			return new Promise (function (resolve, reject) {
 				dbVideos.get(cacheID).onsuccess = function (e) {
 					e.target.result.cache = undefined;
-					if (yt_video.videoID == cacheID) yt_video.cache = undefined;
+					if (yt_video && yt_video.videoID == cacheID) yt_video.cache = undefined;
 					dbVideos.put(e.target.result).onsuccess = resolve;
 				};
 			});
@@ -1506,10 +1505,10 @@ function yt_parseAJAXVideo (vdData) {
 function yt_loadListData(addElements, initialLoad, supressLoader) {
 	return function (pagedContent) { 
 		var requestURL = HOST_YT + "/list_ajax?action_get_list=1&style=json&list=" + pagedContent.data.listID + "&index=" + pagedContent.index;
-		PAGED_REQUEST(pagedContent, "GET", requestURL, false, function(uploadsData) {
+		PAGED_REQUEST(pagedContent, "GET", requestURL, false, function(listData) {
 			// Parsing
-			try { pagedContent.data.lastPage = JSON.parse(uploadsData);
-			} catch (e) { console.error("Failed to get channel uploads data!", e, { uploadsData: uploadsData }); return; }
+			try { pagedContent.data.lastPage = JSON.parse(listData);
+			} catch (e) { console.error("Failed to get list data!", e, { listData: listData }); return; }
 
 			// Extract video uploads
 			var lastVideoCount = pagedContent.data.videos.length;
@@ -1539,7 +1538,6 @@ function yt_loadListData(addElements, initialLoad, supressLoader) {
 
 function yt_loadPlaylistData() {
 	// Validate Playlist ID
-	if (yt_playlistID && yt_playlistID.length != 34) yt_playlistID = undefined;
 	if (yt_playlist && yt_playlist.listID && yt_playlist.listID == yt_playlistID) return;
 	yt_playlist = undefined;
 	if (!yt_playlistID) return;
@@ -1869,23 +1867,23 @@ function yt_loadVideoData(id, background) {
 
 		// Extract metadata
 		video.meta = yt_extractVideoMetadata(page);
-		if (!background) ui_setVideoMetadata();
+		//if (!background) ui_setVideoMetadata();
 
 		if (!video.blocked) {
-			if (!background) ui_setupMediaSession();
+			//if (!background) ui_setupMediaSession();
 			// Extract related videos
 			video.related = yt_extractRelatedVideoData(page.initialData);
-			if (!background) ui_addRelatedVideos(0);
+			//if (!background) ui_addRelatedVideos(0);
 			// Extract comments
 			video.comments = yt_extractVideoCommentData(page.initialData);
 			// Setup paged content loaders
-			if (!background) {
+			/*if (!background) {
 				if (video.related.conToken && ct_isAdvancedCorsHost)
 					ct_registerPagedContent("RV", I("relatedContainer"), yt_loadMoreRelatedVideos, ct_isDesktop? 100 : false, video.related);
 				if (video.comments.conToken && ct_isAdvancedCorsHost && md_pref.loadComments)
 					ct_registerPagedContent("CM", I("vdCommentList"), yt_loadMoreComments, 100, video.comments);
 				ct_checkPagedContent();
-			}
+			}*/
 			// Extract and decode stream data
 			return yt_decodeStreams(page.config)
 			.then (function (streams) {
@@ -1997,14 +1995,15 @@ function yt_extractVideoMetadata(page, video) {
 	} catch (e) { console.error("Failed to read video uploader metadata!", e, page.initialData.contents); }
 
 	try { // Extract secondary metadata
-		meta.metadata = metadataContainer.metadataRowContainer.metadataRowContainerRenderer.rows.reduce((d, r) => {
+		meta.metadata = metadataContainer.metadataRowContainer.metadataRowContainerRenderer.rows?
+			metadataContainer.metadataRowContainer.metadataRowContainerRenderer.rows.reduce((d, r) => {
 			if (r = r.metadataRowRenderer) 
 				d.push({ 
 					name: r.title.runs? r.title.runs.map(t => t.text).join(', ') : r.title.simpleText, 
 					data: r.contents[0].runs? r.contents[0].runs.map(t => t.text).join(', ') : r.contents[0].simpleText, 
 				});
 			return d;
-		}, []);
+		}, []) : [];
 		var category = meta.metadata.find(d => d.name == "Category");
 		meta.category = category? category.data : "Unknown";
 	} catch (e) { console.error("Failed to read secondary video metadata!", e, page.initialData.contents); }
