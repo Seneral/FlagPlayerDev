@@ -2317,6 +2317,8 @@ function yt_decodeStreams (config) {
 			var stream = streams[i];
 			if (stream.cipher) // Encoded on mobile: s, url, sp
 				new URLSearchParams (stream.cipher).forEach(function (v, n) { stream[n] = v; });
+			if (stream.signatureCipher) // Encoded on some desktop videos: s, url, sp
+				new URLSearchParams (stream.signatureCipher).forEach(function (v, n) { stream[n] = v; });
 			if (stream.s) {
 				var arr = stream.s.split('');
 				for (var j = 0; j < transformPlan.length; j++) { 
