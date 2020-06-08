@@ -1153,11 +1153,44 @@ function db_getCachedVideos () {
 		});
 	})
 }
+function db_getCurrentVideoAsCached() {
+	if (yt_video == undefined)
+		return undefined;
+	return {
+		title: yt_video.title, 
+		videoID: yt_video.videoID, 
+		length: yt_video.meta.length, 
+		thumbnailURL: yt_video.meta.thumbnailURL, 
+		addedDate: new Date(), 
+		uploadedDate: yt_video.meta.uploadedDate, 
+		uploader: {
+			name: yt_video.meta.uploader.name,
+			channelID: yt_video.meta.uploader.channelID,
+			url: yt_video.meta.uploader.url,
+		}, 
+		views: yt_video.meta.views, 
+		likes: yt_video.meta.likes, 
+		dislikes: yt_video.meta.dislikes, 
+		comments: yt_video.comments? yt_video.comments.count : 0, 
+		tags: yt_video.meta.tags,
+		categoryID: yt_video.meta.category,
+	};
+}
+function db_storeVideo(video) {
+	return db_access().then(function () {
+		return new Promise(function(resolve, reject) {
+			var transaction = db_database.transaction("videos", "readwrite")
+			.objectStore("videos").put(video);
+			transaction.onsuccess = resolve;
+			transaction.onerror = reject;
+		});
+	});
+}
 function db_getVideo (videoID) {
 	return db_access().then(function () {
 		return new Promise(function(resolve, reject) {
 			var transaction = db_database.transaction("videos", "readonly")
-			.objectStore("videos").get(videoID)
+			.objectStore("videos").get(videoID);
 			transaction.onsuccess = function (e) {
 				if (e.target.result)
 					resolve(e.target.result);
@@ -1213,8 +1246,13 @@ function db_cacheStream () {
 				var dbVideos = db_database.transaction("videos", "readwrite").objectStore("videos");
 				return new Promise (function (resolve, reject) {
 					dbVideos.get(cacheID).onsuccess = function (e) {
-						e.target.result.cache = cacheObj;
-						dbVideos.put(e.target.result).onsuccess = resolve;
+						var cachedVideo;
+						if (e.target.result)
+							cachedVideo = e.target.result;
+						else // In case current video was never cached
+							cachedVideo = db_getCurrentVideoAsCached();
+						cachedVideo.cache = cacheObj;
+						dbVideos.put(cachedVideo).onsuccess = resolve;
 					};
 				});
 			});
