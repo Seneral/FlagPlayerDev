@@ -1157,7 +1157,7 @@ function db_getCurrentVideoAsCached() {
 	if (yt_video == undefined)
 		return undefined;
 	return {
-		title: yt_video.title, 
+		title: yt_video.meta.title, 
 		videoID: yt_video.videoID, 
 		length: yt_video.meta.length, 
 		thumbnailURL: yt_video.meta.thumbnailURL, 
@@ -1171,8 +1171,8 @@ function db_getCurrentVideoAsCached() {
 		views: yt_video.meta.views, 
 		likes: yt_video.meta.likes, 
 		dislikes: yt_video.meta.dislikes, 
-		comments: yt_video.comments? yt_video.comments.count : 0, 
-		tags: yt_video.meta.tags,
+		comments: yt_video.comments.count, // only works on mobile, or when comments are loaded on desktop 
+		tags: "", // Got none of that
 		categoryID: yt_video.meta.category,
 	};
 }
