@@ -2350,7 +2350,7 @@ function yt_decodeStreams (config) {
 			// ITag Data
 			if (ITAGS[itag] == undefined) {
 				console.error("Unknown stream ITag '" + itag + "' (" + config.args.loaderUrl + ")");
-				ITAGS[itag] = {};
+				continue;
 			}
 			stream.isLive = ITAGS[itag].hls || false;
 			stream.isStereo = ITAGS[itag].ss3D || false;
