@@ -1252,7 +1252,7 @@ function db_cacheStream () {
 			if (!response.ok)
 				return Promise.reject(new NetworkError ("Failed to cache - response " + response.statusText));
 
-			cacheObj.size = response.headers.get("content-length");
+			cacheObj.size = parseInt(response.headers.get("content-length"));
 			console.log("Downloaded video stream! Size: " + ui_shortenBytes(cacheObj.size));
 			
 			// Add to cache
