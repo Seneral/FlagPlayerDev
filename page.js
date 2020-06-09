@@ -701,7 +701,7 @@ function ct_nextVideo() {
 			playlist = playlist.filter (v => v.cache != undefined);
 		var index = ct_getVideoPlIndex();
 		if (playlist.length > 1 && index >= 0) // No duplicate playback please
-			playlist = playlist.splice(index, 1);
+			playlist = playlist.filter (v => v.videoID != yt_videoID);
 		if (playlist.length == 0) index = -1;
 		else if (md_pref.playlistRandom) index = Math.floor (Math.random() * playlist.length);
 		else index = index % playlist.length; // Already removed current
@@ -3900,10 +3900,10 @@ function onKeyDown (keyEvent) {
 	var pass = false;
 	if (keyEvent.shiftKey) {
 		switch (keyEvent.key) {
-		case "n": 
+		case "n": case "N":
 			onControlNext();
 			break;
-		case "p":
+		case "p": case "P":
 			onControlPrev();
 			break;
 		default:
