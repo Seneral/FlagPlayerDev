@@ -205,20 +205,23 @@ a, a:link, a:visited, a:hover, a:active {
 .desktopLayout .column.main {
 	flex-grow: 1;
 	width: auto;
-	margin: 1em;
+	margin-right: 1em;
 }
 .desktopLayout .column.side { 
 	flex-grow: 0;
 	flex-shrink: 1;
 	max-width: 35%;
 	margin: 1em;
+	margin-top: 0em;
 	width: 30em; 
 }
 .desktopLayout .section.side { 
 	width: 30em; 
 	max-width: 100%;
 }
-.desktop .section.player {}
+.desktop .section.player {
+	margin-bottom: 1em;
+}
 .desktop .section.banner {}
 .desktop .section.channel {}
 .desktop .section.search {}

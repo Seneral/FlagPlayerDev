@@ -152,6 +152,7 @@ var ct_view; // explicit view request (cache, media, etc)
 var ct_temp = { fullscreen: false, options: false, settings: false, loop: false, } // options: player; settings: page 
 var ct_pagedContent = []; // id, container, autoTrigger, triggerDistance, aborted, loading, loadFunc, page, data
 var ct_isDesktop;
+var ct_pref = {};
 
 /* MEDIA STATE */
 var State = { None: 0, Loading: 1, PreStart: 2, Started: 3, Ended: 4, Error: 5 }
@@ -308,8 +309,8 @@ function ct_init () {
 /* -------------------- */
 
 function ct_loadPreferences () {
-	md_pref = {};
 	// Playback options
+	md_pref = {};
 	md_pref.dash = G("prefDash") == "false"? false : true;
 	md_pref.legacyVideo = G("prefLegacyVideo") || "BEST"; // NONE - BEST - WORST - <Resolution>
 	md_pref.dashVideo = G("prefDashVideo") || "72030"; // NONE - BEST - WORST - <Resolution*100+FPS>
@@ -318,17 +319,18 @@ function ct_loadPreferences () {
 	md_pref.muted = G("prefMuted") == "true"? true : false;
 	md_pref.volume = G("prefVolume") != undefined? parseFloat(G("prefVolume")) : 1;
 	// Page Settings
-	md_pref.playlistRandom = G("prefPlaylistRandom") == "false"? false : true;
-	md_pref.autoplay = G("prefAutoplay") == "false"? false : true;
-	md_pref.theme = G("prefTheme") || "DARK";
-	md_pref.corsAPIHost = G("prefCorsAPIHost") || HOST_CORS;
-	md_pref.relatedVideos = G("prefRelated") || "ALL";
-	md_pref.filterCategories = (G("prefFilterCategories") || "").split(",").map(c => parseInt(c));
-	md_pref.filterHideCompletely = G("prefFilterHideCompletely") == "false"? false : true;
-	md_pref.loadComments = G("prefLoadComments") == "false"? false : true;
-	// Cache
-	md_pref.cacheAudioQuality = G("prefCacheAudioQuality") || "128";
-	md_pref.cacheForceUse = G("prefCacheForceUse") == "false"? false : true;
+	ct_pref = {};
+	ct_pref.playlistRandom = G("prefPlaylistRandom") == "false"? false : true;
+	ct_pref.autoplay = G("prefAutoplay") == "false"? false : true;
+	ct_pref.theme = G("prefTheme") || "DARK";
+	ct_pref.corsAPIHost = G("prefCorsAPIHost") || HOST_CORS;
+	ct_pref.relatedVideos = G("prefRelated") || "ALL";
+	ct_pref.filterCategories = (G("prefFilterCategories") || "").split(",").map(c => parseInt(c));
+	ct_pref.filterHideCompletely = G("prefFilterHideCompletely") == "false"? false : true;
+	ct_pref.loadComments = G("prefLoadComments") == "false"? false : true;
+	ct_pref.cacheAudioQuality = G("prefCacheAudioQuality") || "128";
+	ct_pref.cacheForceUse = G("prefCacheForceUse") == "false"? false : true;
+	ct_pref.smallPlayer = G("prefPlayerSmall") == "true"? true : false;
 }
 function ct_savePreferences () {
 	// Playback Options
@@ -342,17 +344,17 @@ function ct_savePreferences () {
 	S("prefMuted", md_pref.muted);
 	S("prefVolume", md_pref.volume);
 	// Page Settings
-	S("prefAutoplay", md_pref.autoplay);
-	S("prefPlaylistRandom", md_pref.playlistRandom);
-	S("prefTheme", md_pref.theme);
-	S("prefRelated", md_pref.relatedVideos);
-	S("prefFilterCategories", md_pref.filterCategories.join(","));
-	S("prefFilterHideCompletely", md_pref.filterHideCompletely);
-	S("prefLoadComments", md_pref.loadComments);
-	S("prefCorsAPIHost", md_pref.corsAPIHost);
-	// Cache
-	S("prefCacheAudioQuality", md_pref.cacheAudioQuality);
-	S("prefCacheForceUse", md_pref.cacheForceUse);
+	S("prefAutoplay", ct_pref.autoplay);
+	S("prefPlaylistRandom", ct_pref.playlistRandom);
+	S("prefTheme", ct_pref.theme);
+	S("prefRelated", ct_pref.relatedVideos);
+	S("prefFilterCategories", ct_pref.filterCategories.join(","));
+	S("prefFilterHideCompletely", ct_pref.filterHideCompletely);
+	S("prefLoadComments", ct_pref.loadComments);
+	S("prefCorsAPIHost", ct_pref.corsAPIHost);
+	S("prefCacheAudioQuality", ct_pref.cacheAudioQuality);
+	S("prefCacheForceUse", ct_pref.cacheForceUse);
+	S("prefPlayerSmall", ct_pref.smallPlayer);
 }
 
 
@@ -703,7 +705,7 @@ function ct_nextVideo() {
 		if (playlist.length > 1 && index >= 0) // No duplicate playback please
 			playlist = playlist.filter (v => v.videoID != yt_videoID);
 		if (playlist.length == 0) index = -1;
-		else if (md_pref.playlistRandom) index = Math.floor (Math.random() * playlist.length);
+		else if (ct_pref.playlistRandom) index = Math.floor (Math.random() * playlist.length);
 		else index = index % playlist.length; // Already removed current
 		newVideo = index > 0? playlist[index] : undefined;
 	}
@@ -766,7 +768,7 @@ function ct_loadMedia () {
 		if (yt_video.related.conToken && ct_isAdvancedCorsHost)
 			ct_registerPagedContent("RV", I("relatedContainer"), yt_loadMoreRelatedVideos, ct_isDesktop? 100 : false, yt_video.related);
 		// Comments
-		if (yt_video.comments.conToken && ct_isAdvancedCorsHost && md_pref.loadComments)
+		if (yt_video.comments.conToken && ct_isAdvancedCorsHost && ct_pref.loadComments)
 			ct_registerPagedContent("CM", I("vdCommentList"), yt_loadMoreComments, 100, yt_video.comments);
 		ct_checkPagedContent();
 	})
@@ -813,7 +815,7 @@ function ct_loadMedia () {
 
 function ct_mediaLoad () {
 	md_state = State.Loading;
-	md_paused = !md_pref.autoplay;
+	md_paused = !ct_pref.autoplay;
 	md_flags.buffering = false;
 	md_flags.seeking = false;
 	ui_setPoster();
@@ -958,7 +960,7 @@ function ct_startAutoplay (timeout) {
 	clearTimeout(ct_timerAutoplay);
 	if (timeout == undefined) {
 		if (yt_playlist) timeout = 1;
-		else if (md_pref.autoplay) timeout = 8;
+		else if (ct_pref.autoplay) timeout = 8;
 	}
 	if (timeout != undefined) {
 		ct_timerAutoplay = setTimeout (ct_nextVideo, timeout * 1000);
@@ -1237,17 +1239,17 @@ function db_cacheStream () {
 	}
 
 	var cacheID = yt_video.videoID;
-	var stream = md_selectStream(md_selectableStreams().dashAudio, md_pref.cacheAudioQuality, md_daVal);
+	var stream = md_selectStream(md_selectableStreams().dashAudio, ct_pref.cacheAudioQuality, md_daVal);
 	var cacheObj = { 
 		url: VIRT_CACHE + cacheID,
 		source: stream.url,
-		quality: md_pref.cacheAudioQuality,
+		quality: ct_pref.cacheAudioQuality,
 		itag: stream.itag,
 	};
 
 	return window.caches.open("flagplayer-media")
 	.then (function (cache) {
-		return fetch(md_pref.corsAPIHost + cacheObj.source, { headers: { "range": "bytes=0-" } })
+		return fetch(ct_pref.corsAPIHost + cacheObj.source, { headers: { "range": "bytes=0-" } })
 		.then(function(response) {
 			if (!response.ok)
 				return Promise.reject(new NetworkError ("Failed to cache - response " + response.statusText));
@@ -1317,7 +1319,7 @@ function db_deleteCachedStream (cacheID) {
 
 /* Loads URL using browser mechanics - response is full HTML including secrets. First load needs to be a browse */
 function yt_browse (subPath) {
-	return fetch(md_pref.corsAPIHost + HOST_YT + subPath, {
+	return fetch(ct_pref.corsAPIHost + HOST_YT + subPath, {
 		headers: yt_getRequestHeadersBrowser(false)
 	}).then(function(response) {
 		if (!response.ok) return Promise.reject(new NetworkError(response));
@@ -1379,7 +1381,7 @@ function yt_navigate (subPath, itctToken) {
 	// TODO: Session Data can vary between page types - don't assume itct&csn
 	yt_setNavCookie(subPath, "itct=" + itctToken + "&csn=" + yt_page.secrets.csn);
 
-	return fetch(md_pref.corsAPIHost + HOST_YT + subPath, {
+	return fetch(ct_pref.corsAPIHost + HOST_YT + subPath, {
 		headers: yt_getRequestHeadersYoutube("application/x-www-form-urlencoded"),
 		body: "session_token=" + encodeURIComponent(yt_page.secrets.xsrfToken)
 	}).then(function(response) {
@@ -1905,7 +1907,7 @@ function yt_loadVideoData(id, background) {
 			// Video blocked
 			video.blocked = true;
 			// Attempt to get metadata through separate request
-			return fetch(md_pref.corsAPIHost + HOST_YT + "/get_video_info?ps=default&video_id=" + id)
+			return fetch(ct_pref.corsAPIHost + HOST_YT + "/get_video_info?ps=default&video_id=" + id)
 			.then (function(data) {
 				if (!data.ok) return Promise.reject(new NetworkError(data));
 				return data.text();
@@ -1942,7 +1944,7 @@ function yt_loadVideoData(id, background) {
 			/*if (!background) {
 				if (video.related.conToken && ct_isAdvancedCorsHost)
 					ct_registerPagedContent("RV", I("relatedContainer"), yt_loadMoreRelatedVideos, ct_isDesktop? 100 : false, video.related);
-				if (video.comments.conToken && ct_isAdvancedCorsHost && md_pref.loadComments)
+				if (video.comments.conToken && ct_isAdvancedCorsHost && ct_pref.loadComments)
 					ct_registerPagedContent("CM", I("vdCommentList"), yt_loadMoreComments, 100, video.comments);
 				ct_checkPagedContent();
 			}*/
@@ -2102,7 +2104,7 @@ function yt_extractRelatedVideoData(initialData) {
 	return related;
 }
 function yt_loadMoreRelatedVideos (pagedContent) {
-	if (md_pref.relatedVideos != "ALL") return; // Still registered to allow it to load immediately when settings change
+	if (ct_pref.relatedVideos != "ALL") return; // Still registered to allow it to load immediately when settings change
 	
 	var requestURL = HOST_YT + "/related_ajax?" + 
 		"&ctoken=" + pagedContent.data.conToken + "&continuation=" + pagedContent.data.conToken + "&itct=" + pagedContent.data.itctToken; 
@@ -2343,7 +2345,7 @@ function yt_decodeStreams (config) {
 			}));
 		}
 		// Extract and cache signing transformation from large base.js (2MB download)
-		resolve(fetch(md_pref.corsAPIHost + HOST_YT + jsID).then(function(response) {
+		resolve(fetch(ct_pref.corsAPIHost + HOST_YT + jsID).then(function(response) {
 			return response.text();
 		}).then(function(jsSRC) {
 			// Get list of functions applied on the cipher in jsSRC code
@@ -2504,14 +2506,17 @@ function yt_decodeStreams (config) {
 /* --- UI LAYOUT ------ */
 /* -------------------- */
 
-function ui_updatePageLayout () {
+function ui_updatePageLayout (forceRebuild = false) {
 	var fontSize = parseFloat(getComputedStyle(document.body).fontSize);
 	ct_isDesktop = window.innerWidth / fontSize > 60;
 	var setDesktop = document.body.classList.contains ("desktop");
 	// Check if switching between mobile and desktop layout is required
-	if (ct_isDesktop && !setDesktop) {
-		if (md_pref.smallPlayer)  // Move main player into main column 
+	if (ct_isDesktop && (!setDesktop || forceRebuild)) {
+		if (ct_pref.smallPlayer) // Move main player into main column 
 			ht_main.appendChild(sec_player);
+		else
+			ht_container.insertBefore(sec_player, ht_container.firstChild);
+		setTimeout(ht_playlistVideos.onscroll, 1);
 		ht_main.appendChild(sec_home);
 		ht_main.appendChild(sec_cache);
 		ht_main.appendChild(sec_video);
@@ -2523,9 +2528,8 @@ function ui_updatePageLayout () {
 		document.body.classList.add("desktop");
 		document.body.classList.remove("mobile");
 	}
-	if (!ct_isDesktop && setDesktop) {
-		if (md_pref.smallPlayer) // Move main player back
-			ht_container.insertBefore(sec_player, ht_container.firstChild);
+	if (!ct_isDesktop && (setDesktop || forceRebuild)) {
+		ht_container.insertBefore(sec_player, ht_container.firstChild);
 		ht_mobile.appendChild(sec_playlist);
 		ht_mobile.appendChild(sec_home);
 		ht_mobile.appendChild(sec_cache);
@@ -2536,8 +2540,7 @@ function ui_updatePageLayout () {
 		ht_mobile.appendChild(sec_channel);
 		document.body.classList.add("mobile");
 		document.body.classList.remove("desktop");
-	}
-	if (!ct_isDesktop) { // Collapse playlist on mobile by default
+		// Collapse playlist on mobile by default
 		I("playlist").setAttribute("collapsed", "");
 	}
 }
@@ -2560,7 +2563,7 @@ function ui_initStates () {
 }
 function ui_updatePageState () {
 	document.body.className = document.body.className.replace(/\s?theme-[a-zA-Z]+\s?/gi, ' ');
-	document.body.classList.add("theme-" + md_pref.theme.toLowerCase());
+	document.body.classList.add("theme-" + ct_pref.theme.toLowerCase());
 }
 function ui_updateSoundState () { 
 	I("muteButton").setAttribute("state", md_pref.muted? "on" : "off");
@@ -2731,15 +2734,16 @@ function ui_formatText(text) {
 
 function ui_openSettings () {
 	setDisplay("settingsPanel", "block");
-	I("st_autoplay").checked = md_pref.autoplay;
-	I("st_plshuffle").checked = md_pref.playlistRandom;
-	I("st_theme").value = md_pref.theme;
-	I("st_related").value = md_pref.relatedVideos;
-	I("st_corsHost").value = md_pref.corsAPIHost;
-	I("st_filter_hide").checked = md_pref.filterHideCompletely;
-	I("st_comments").checked = md_pref.loadComments;
-	I("st_cache_quality").value = md_pref.cacheAudioQuality;
-	I("st_cache_force").checked = md_pref.cacheForceUse;
+	I("st_autoplay").checked = ct_pref.autoplay;
+	I("st_plshuffle").checked = ct_pref.playlistRandom;
+	I("st_theme").value = ct_pref.theme;
+	I("st_related").value = ct_pref.relatedVideos;
+	I("st_corsHost").value = ct_pref.corsAPIHost;
+	I("st_filter_hide").checked = ct_pref.filterHideCompletely;
+	I("st_comments").checked = ct_pref.loadComments;
+	I("st_cache_quality").value = ct_pref.cacheAudioQuality;
+	I("st_cache_force").checked = ct_pref.cacheForceUse;
+	I("st_small_player").checked = ct_pref.smallPlayer;
 	var filterCats = I("st_filter_categories");
 	ui_fillCategoryFilter(filterCats);
 	filterCats.firstElementChild.innerText = filterCats.countUnselected() + " filtered";
@@ -2897,7 +2901,7 @@ function ui_setVideoMetadata() {
 		setDisplay("vdTextContainer", "none");
 	}
 
-	if (yt_video.loaded && md_pref.loadComments)
+	if (yt_video.loaded && ct_pref.loadComments)
 		sec_comments.style.display = "block";
 	
 }
@@ -2933,7 +2937,7 @@ function ui_addRelatedVideos (startIndex) {
 }
 function ui_updateRelatedVideos () {
 	if (yt_video && yt_video.related) {
-		if (md_pref.relatedVideos == "NONE") {
+		if (ct_pref.relatedVideos == "NONE") {
 			sec_related.style.display = "none";
 		} else {
 			sec_related.style.display = "block";
@@ -2941,9 +2945,9 @@ function ui_updateRelatedVideos () {
 			[].forEach.call(videoContainer.children, function (c) {
 				var filtered = false;
 				// TODO
-				c.style.display = md_pref.relatedVideos == "ALL" && !filtered? "" : "none";
+				c.style.display = ct_pref.relatedVideos == "ALL" && !filtered? "" : "none";
 			});
-			if (md_pref.relatedVideos == "NEXT") {
+			if (ct_pref.relatedVideos == "NEXT") {
 				// TODO var firstMatch = videoContainer.firstElementChild;
 				videoContainer.firstElementChild.style.display = "";
 			}
@@ -2999,7 +3003,7 @@ function ui_resetComments () {
 function ui_setupSearch () {
 	sec_search.style.display = "block";
 	ui_fillCategoryFilter (I("search_categories"));
-	if (md_pref.filterHideCompletely) I("search_hideCompletely").setAttribute("toggled", "");
+	if (ct_pref.filterHideCompletely) I("search_hideCompletely").setAttribute("toggled", "");
 	else I("search_hideCompletely").removeAttribute("toggled");
 	I("searchField").value = yt_searchTerms;
 }
@@ -3017,9 +3021,9 @@ function ui_updateSearchResults () {
 	[].forEach.call(videoContainer.children, function (c) {
 		var videoID = c.getAttribute("videoID");
 		var video = yt_searchResults.videos.find(v => v.videoID == videoID);
-		var filtered = !video || md_pref.filterCategories.includes(video.categoryID);
-		c.style.display = filtered && md_pref.filterHideCompletely? "none" : "";
-		c.style.opacity = filtered && !md_pref.filterHideCompletely? 0.2 : 1;
+		var filtered = !video || ct_pref.filterCategories.includes(video.categoryID);
+		c.style.display = filtered && ct_pref.filterHideCompletely? "none" : "";
+		c.style.opacity = filtered && !ct_pref.filterHideCompletely? 0.2 : 1;
 	});
 }
 function ui_resetSearch () {
@@ -3320,7 +3324,7 @@ function ui_fillCategoryFilter (categories) {
 	categories.container.innerHTML = "";
 	Object.keys(CATEGORIES).forEach (c => {
 		var el = ui_addDropdownElementCustom(categories.container, c, CATEGORIES[c]);
-		el.selected = !md_pref.filterCategories.includes(parseInt(c));
+		el.selected = !ct_pref.filterCategories.includes(parseInt(c));
 	});
 }
 
@@ -3600,6 +3604,7 @@ function ui_setupEventHandlers () {
 	I("st_corsHost").onchange = function () { onSettingsChange("CH"); };
 	I("st_cache_quality").onchange = function () { onSettingsChange("CC"); };
 	I("st_cache_force").onchange = function () { onSettingsChange("CC"); };
+	I("st_small_player").onchange = function () { onSettingsChange("SP"); };
 	// Search Bar
 	I("search_categories").onchange = onSearchUpdate;
 	onToggleButton(I("search_hideCompletely"), onSearchUpdate);
@@ -3661,34 +3666,38 @@ function onSettingsToggle () {
 function onSettingsChange (hint) {
 	switch (hint) {
 		case "AP": 
-			md_pref.autoplay = I("st_autoplay").checked;
+			ct_pref.autoplay = I("st_autoplay").checked;
 			break;
 		case "PS": 
-			md_pref.playlistRandom = I("st_plshuffle").checked;
+			ct_pref.playlistRandom = I("st_plshuffle").checked;
 			break;
 		case "CH":
-			md_pref.corsAPIHost = I("st_corsHost").value;
-			if (!md_pref.corsAPIHost.endsWith("/")) md_pref.corsAPIHost += "/";
+			ct_pref.corsAPIHost = I("st_corsHost").value;
+			if (!ct_pref.corsAPIHost.endsWith("/")) ct_pref.corsAPIHost += "/";
 			break;
 		case "FV":
-			md_pref.filterHideCompletely = I("st_filter_hide").checked;
-			md_pref.filterCategories = I("st_filter_categories").getUnselected().map(o => parseInt(o.getAttribute("value")));
+			ct_pref.filterHideCompletely = I("st_filter_hide").checked;
+			ct_pref.filterCategories = I("st_filter_categories").getUnselected().map(o => parseInt(o.getAttribute("value")));
 			I("st_filter_categories").firstElementChild.innerText = I("st_filter_categories").countUnselected() + " filtered";
 			ui_updateSearchResults();
 			break;
 		case "CM":
-			md_pref.loadComments = I("st_comments").checked;
+			ct_pref.loadComments = I("st_comments").checked;
 		case "TH": 
-			md_pref.theme = I("st_theme").value;
+			ct_pref.theme = I("st_theme").value;
 			ui_updatePageState(); 
 			break;
 		case "RV":
-			md_pref.relatedVideos = I("st_related").value;
+			ct_pref.relatedVideos = I("st_related").value;
 			ui_updateRelatedVideos(); 
 			break;
 		case "CC":
-			md_pref.cacheAudioQuality = I("st_cache_quality").value;
-			md_pref.cacheForceUse = I("st_cache_force").checked;
+			ct_pref.cacheAudioQuality = I("st_cache_quality").value;
+			ct_pref.cacheForceUse = I("st_cache_force").checked;
+			break;
+		case "SP":
+			ct_pref.smallPlayer = I("st_small_player").checked;
+			ui_updatePageLayout(true);
 			break;
 		default: 
 			break;
@@ -3699,8 +3708,8 @@ function onSearchGo () {
 	ct_navSearch(I("searchField").value);
 }
 function onSearchUpdate () {
-	md_pref.filterHideCompletely = I("search_hideCompletely").hasAttribute("toggled");
-	md_pref.filterCategories = I("search_categories").getUnselected().map(o => parseInt(o.getAttribute("value")));
+	ct_pref.filterHideCompletely = I("search_hideCompletely").hasAttribute("toggled");
+	ct_pref.filterCategories = I("search_categories").getUnselected().map(o => parseInt(o.getAttribute("value")));
 	ui_updateSearchResults();
 	ct_savePreferences();
 }
@@ -4099,7 +4108,7 @@ function md_updateStreams ()  {
 	md_sources = {};
 	if (md_pref.dash) {
 		md_sources.video = selectedStreams.dashVideo? selectedStreams.dashVideo.url : '';
-		md_sources.audio = yt_video.cache && (md_pref.cacheForceUse || !ct_online)? yt_video.cache.url 
+		md_sources.audio = yt_video.cache && (ct_pref.cacheForceUse || !ct_online)? yt_video.cache.url 
 			: (selectedStreams.dashAudio? selectedStreams.dashAudio.url : '');
 	} else {
 		md_sources.video = selectedStreams.legacyVideo? selectedStreams.legacyVideo.url : '';
@@ -4411,7 +4420,7 @@ function PAGED_REQUEST (pagedContent, method, url, authenticate, callback, supre
 	pagedContent.loading = true;
 	if (!supressLoader) ui_addLoadingIndicator(pagedContent.container);
 	// Perform request
-	fetch(md_pref.corsAPIHost + url, {
+	fetch(ct_pref.corsAPIHost + url, {
 		method: method,
 		headers: authenticate? 
 			yt_getRequestHeadersYoutube("application/x-www-form-urlencoded") : 
