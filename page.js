@@ -3754,7 +3754,14 @@ function onSelectContextAction (selectedValue, dropdownElement, selectedElement)
 	else if (selectedValue == "thumbnailImgLink" && yt_video && yt_video.ready)
 		window.open(yt_video.meta.thumbnailURL);
 	else if (selectedValue.startsWith("cacheDelete-"))
-		db_deleteCachedStream(selectedValue.substring(12)).catch(function(){});
+		db_deleteCachedStream(selectedValue.substring(12))
+		.then(function() {
+			var delVideoID = selectedValue.substring(12);
+			var delIndex = db_cachedVideos.findIndex(v => v.videoID == delVideoID);
+			if (delIndex >= 0) db_cachedVideos.splice(delIndex, 1);
+			ui_setupCache();
+		})
+		.catch(function(){});
 }
 function onLoadReplies (container, commentID) {
 	var comment = yt_video.comments.comments.find(c => c.id == commentID);
