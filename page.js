@@ -2778,7 +2778,7 @@ function ui_resetHome () {
 function ui_setupCache () {
 	if (ct_page != Page.Cache) return;
 	I("cacheAmount").innerText = db_cachedVideos.length;
-	var bytesUsed = db_cachedVideos.reduce(function(sum, vid) { return sum + vid.cache.size; }, 0);
+	var bytesUsed = db_cachedVideos.reduce(function(sum, vid) { return sum + parseInt(vid.cache.size); }, 0);
 	if ("storage" in navigator) {
 		navigator.storage.estimate().then(function(estimate) {
 			I("cacheQuota").innerText = ui_shortenBytes(bytesUsed) + " (" + ui_shortenBytes(estimate.usage) + " / " + ui_shortenBytes(estimate.quota) + ")";
