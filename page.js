@@ -698,12 +698,14 @@ function ct_nextVideo() {
 	if (yt_playlist) {
 		var playlist = yt_playlist.videos;
 		if (!ct_online) // Only cached available
-			playlist = yt_playlist.videos.filter (v => v.cache != undefined);
-		var index;
+			playlist = playlist.filter (v => v.cache != undefined);
+		var index = ct_getVideoPlIndex();
+		if (playlist.length > 1 && index >= 0) // No duplicate playback please
+			playlist = playlist.splice(index, 1);
 		if (playlist.length == 0) index = -1;
 		else if (md_pref.playlistRandom) index = Math.floor (Math.random() * playlist.length);
-		else index = ct_getVideoPlIndex() + 1;
-		newVideo = playlist[index];
+		else index = index % playlist.length; // Already removed current
+		newVideo = index > 0? playlist[index] : undefined;
 	}
 	else if (yt_video && yt_video.related && ct_online) {
 		newVideo = yt_video.related.videos[0];
@@ -2411,7 +2413,8 @@ function yt_decodeStreams (config) {
 
 			// ITag Data
 			if (ITAGS[itag] == undefined) {
-				console.error("Unknown stream ITag '" + itag + "' (" + config.args.loaderUrl + ")");
+				if (itag != undefined)
+					console.error("Unknown stream ITag '" + itag + "' (" + config.args.loaderUrl + ")");
 				continue;
 			}
 			stream.isLive = ITAGS[itag].hls || false;
@@ -3740,12 +3743,18 @@ function onSelectContextAction (selectedValue, dropdownElement, selectedElement)
 	var selectedValue = selectedValue || "";
 	if (selectedValue == "cmTop") yt_loadTopComments();
 	else if (selectedValue == "cmNew") yt_loadNewComments();
-	else if (selectedValue == "cache") db_cacheStream().then(function() {
-		setDisplay("cacheStreamPanel", "");
-	}).catch(function(){
-		console.error("Failed to cache audio stream!");
-	});
-	else if (selectedValue.startsWith("cacheDelete-")) db_deleteCachedStream(selectedValue.substring(12)).catch(function(){});
+	else if (selectedValue == "cache") 
+		db_cacheStream()
+		.then(function() { setDisplay("cacheStreamPanel", ""); })
+		.catch(function(){ console.error("Failed to cache audio stream!"); });
+	else if (selectedValue == "downloadAudio" && yt_video && yt_video.ready)
+		window.open(md_selectStream(md_selectableStreams().dashAudio, "BEST", md_daVal).url);
+	else if (selectedValue == "downloadVideo" && yt_video && yt_video.ready)
+		window.open(md_selectStream(md_selectableStreams().dashVideo, "BEST", md_dvVal).url);
+	else if (selectedValue == "thumbnailImgLink" && yt_video && yt_video.ready)
+		window.open(yt_video.meta.thumbnailURL);
+	else if (selectedValue.startsWith("cacheDelete-"))
+		db_deleteCachedStream(selectedValue.substring(12)).catch(function(){});
 }
 function onLoadReplies (container, commentID) {
 	var comment = yt_video.comments.comments.find(c => c.id == commentID);
@@ -3889,7 +3898,21 @@ function onKeyDown (keyEvent) {
 	if (keyEvent.defaultPrevented) return;
 	if (document.activeElement.tagName == "INPUT") return;
 	var pass = false;
-	switch (keyEvent.key) {
+	if (keyEvent.shiftKey) {
+		switch (keyEvent.key) {
+		case "n": 
+			onControlNext();
+			break;
+		case "p":
+			onControlPrev();
+			break;
+		default:
+			break;
+		}	
+	} else if (keyEvent.ctrlKey) {
+		pass = true;
+	} else {
+		switch (keyEvent.key) {
 		case " ": case "k":
 			ct_mediaPlayPause(!md_paused, true);
 			break;
@@ -3904,31 +3927,26 @@ function onKeyDown (keyEvent) {
 		case "Up": case "ArrowUp": 
 			md_updateVolume(md_pref.volume + 0.1);
 			ct_savePreferences();
+			I("volumeSlider").parentElement.setAttribute("interacting", "");
 			break
 		case "Down": case "ArrowDown": 
 			md_updateVolume(md_pref.volume - 0.1);
 			ct_savePreferences();
+			I("volumeSlider").parentElement.setAttribute("interacting", "");
 			break;
 		case "f": 
 			onToggleFullscreen();
-			pass = true;
 			break;
 		case "m": 
 			onControlMute();
-			break;
-		case "n": 
-			if(keyEvent.shiftKey) 
-				onControlNext();
-			break;
-		case "p": 
-			if(keyEvent.shiftKey) 
-				onControlPrev();
+			I("volumeSlider").parentElement.setAttribute("interacting", "");
 			break;
 		default:
 			if (keyEvent.keyCode >= 48 && keyEvent.keyCode <= 57)
 				md_updateTime(md_totalTime * (keyEvent.keyCode-48)/10);
 			else
 				pass = true;
+		}
 	}
 	if (!pass) {
 		event.preventDefault();
@@ -4563,7 +4581,7 @@ function ht_appendCommentElement (container, commentID, authorNav, authorIMG, au
 	container.insertAdjacentHTML ("beforeEnd",
 		'<div class="cmContainer">' + 
 			'<div class="cmProfileColumn">' +
-				'<a class="overlayLink" navigation="' + authorNav + '" href="' + ct_getNavLink(authorNav) + '"></a>' + 
+				'<a class="overlayLink" tabIndex="-1" navigation="' + authorNav + '" href="' + ct_getNavLink(authorNav) + '"></a>' + 
 				'<img class="cmProfileImg profileImg" src="' + authorIMG + '">' +
 			'</div>' +
 			'<div class="cmContentColumn selectable">' +
@@ -4578,9 +4596,9 @@ function ht_appendCommentElement (container, commentID, authorNav, authorIMG, au
 					'<button class="cmCollapser collapser" more-text="Show More" less-text="Show Less"></button>' +
 				'</div>' +
 				'<div class="cmActionBar actionBar noselect">' +
-					'<button class="barAction"><svg viewBox="6 6 36 36"><use href="#svg_like"/></svg> ' + (likes? likes : "") + '</button>' +
-					'<button class="barAction"><svg viewBox="6 6 36 36"><use href="#svg_dislike"/></svg></button>' +
-					'<a class="barAction" href="' + yt_url + '&lc=' + commentID + '" target="_blank">Reply</a>' +
+					'<button class="barAction" tabIndex="-1"><svg viewBox="6 6 36 36"><use href="#svg_like"/></svg> ' + (likes? likes : "") + '</button>' +
+					'<button class="barAction" tabIndex="-1"><svg viewBox="6 6 36 36"><use href="#svg_dislike"/></svg></button>' +
+					'<a class="barAction" tabIndex="-1" href="' + yt_url + '&lc=' + commentID + '" target="_blank">Reply</a>' +
 				'</div>' +
 		repliesContainer +
 			'</div>' +

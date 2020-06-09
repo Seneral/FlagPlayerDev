@@ -223,7 +223,7 @@ See https://github.com/Seneral/FlagPlayer for details
 						</div>
 					</div>
 					</br>
-					<a href="?view=cache">Cached Audio Streams</a> </br>
+					<a class="freeLink" href="?view=cache">Cached Audio Streams</a> </br>
 					</br>
 
 					<span>Saved Playlists:</span>
@@ -269,14 +269,17 @@ See https://github.com/Seneral/FlagPlayer for details
 								<svg viewBox="6 6 36 36"><use href="#svg_hdots"/></svg>
 								<div class="dropdownContent">
 									<a tabindex="0" class="youtubeLink" href="https://www.youtube.com" target="_blank">Watch on YouTube</a>
-									<span tabindex="0" value="cache">Cache Video</span>
+									<span tabindex="0" value="cache">Cache Audio Stream</span>
+									<a tabindex="0" value="downloadAudio">Download Audio</a>
+									<a tabindex="0" value="downloadVideo">Download Video</a>
+									<a tabindex="0" value="thumbnailImgLink">Thumbnail</a>
 								</div>
 							</button>
 						</div>
 					</div>
 					<div class="vdDetail secondary">
 						<div class="vdUploadContainer">
-							<a class="vdUploadLink">
+							<a class="vdUploadLink" tabIndex="-1">
 								<img class="vdUploadImg profileImg" id="vdUploaderImg" nav>
 							</a>
 							<a class="vdUploadLink">

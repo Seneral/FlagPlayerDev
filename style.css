@@ -47,6 +47,11 @@ body {
 * {
 	box-sizing: border-box;
 }
+a, a:link, a:visited, a:hover, a:active {
+	color: inherit;
+	text-decoration: inherit;
+}
+
 
 /* -------------------------------------------------------------------- */
 /* ---- HEADER -------------------------------------------------------- */
@@ -798,7 +803,7 @@ body {
 	width: 32px;
 }
 .cmAuthorName {
-	display: inline-block;
+	display: inline;
 	font-size: 110%;
 	font-weight: bolder;
 	padding-right: 0.5em;
@@ -1133,9 +1138,9 @@ button {
 		  -ms-user-select: text; /* Internet Explorer/Edge */
 			  user-select: text; /* Chrome and Opera */
 }
-a, a:link, a:visited, a:hover, a:active {
-	color: inherit;
-	text-decoration: inherit;
+a.freeLink {
+	font-weight: bolder;
+	color: var(--txt-sec-color);
 }
 
 
@@ -1166,6 +1171,10 @@ a, a:link, a:visited, a:hover, a:active {
 
 .collapsable .collapser, .contentLoader {
 	cursor: pointer;
+}
+.collapsable .collapser:focus, .contentLoader:focus {
+	cursor: pointer;
+	outline: -webkit-focus-ring-color auto 1px;
 }
 button.contentLoader, span.contentLoader, button.collapser, span.collapser {
 	font-weight: bolder;
@@ -1336,7 +1345,6 @@ button.contentLoader, span.contentLoader, button.collapser, span.collapser {
 	padding: 0.25em 0.5em;
 	text-align: center !important;
 	color: var(--txt-sec-color) !important;
-	outline: none;
 }
 .barAction.fixed, .contextAction.fixed {
 	min-width: 5em;
