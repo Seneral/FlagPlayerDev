@@ -446,6 +446,25 @@ See https://github.com/Seneral/FlagPlayer for details
 					<span>CORS Host</span>
 					<input type="text" class="baseField rightControl" id="st_corsHost">
 				</div>
+
+				<div>
+					<span>Cache Quality</span>
+					<select class="selector rightControl" id="st_cache_quality">
+						<option value="BEST">Best</option>
+						<option value="160">160kbps</option>
+						<option value="128">128kbps</option>
+						<option value="70">70kbps</option>
+						<option value="50">50kbps</option>
+						<option value="WORST">Worst</option>
+					</select>
+					</br>
+					<span>Cache First</span>
+					<label class="switch rightControl">
+						<input type="checkbox" id="st_cache_force">
+						<span class="background"></span>
+						<span class="knob"></span>
+					</label>
+				</div>
 			</div>
 			<div class="settingsHeader">
 				<span>About</span>
@@ -470,7 +489,7 @@ See https://github.com/Seneral/FlagPlayer for details
 		</div>
 
 		<div class="notificationPanel" id="cacheStreamPanel" style="display: none;">
-			<div> Cached audio stream! <button id="seeCacheButton">See cache</button> </div>
+			<div> Cached audio stream! <button id="seeCacheButton">See Cache</button> </div>
 			<div class="flexSpace"></div>
 			<button class="notificationDismiss icon">
 				<svg viewBox="6 6 36 36"><use href="#svg_cross"/></svg>

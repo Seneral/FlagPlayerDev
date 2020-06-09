@@ -327,7 +327,7 @@ function ct_loadPreferences () {
 	md_pref.filterHideCompletely = G("prefFilterHideCompletely") == "false"? false : true;
 	md_pref.loadComments = G("prefLoadComments") == "false"? false : true;
 	// Cache
-	md_pref.cacheAudioQuality = G("prefCacheAudioQuality") || "120";
+	md_pref.cacheAudioQuality = G("prefCacheAudioQuality") || "128";
 	md_pref.cacheForceUse = G("prefCacheForceUse") == "false"? false : true;
 }
 function ct_savePreferences () {
@@ -2738,6 +2738,8 @@ function ui_openSettings () {
 	I("st_corsHost").value = md_pref.corsAPIHost;
 	I("st_filter_hide").checked = md_pref.filterHideCompletely;
 	I("st_comments").checked = md_pref.loadComments;
+	I("st_cache_quality").value = md_pref.cacheAudioQuality;
+	I("st_cache_force").checked = md_pref.cacheForceUse;
 	var filterCats = I("st_filter_categories");
 	ui_fillCategoryFilter(filterCats);
 	filterCats.firstElementChild.innerText = filterCats.countUnselected() + " filtered";
@@ -3595,6 +3597,8 @@ function ui_setupEventHandlers () {
 	I("st_filter_hide").onchange = function () { onSettingsChange("FV"); };
 	I("st_comments").onchange = function () { onSettingsChange("CM"); };
 	I("st_corsHost").onchange = function () { onSettingsChange("CH"); };
+	I("st_cache_quality").onchange = function () { onSettingsChange("CC"); };
+	I("st_cache_force").onchange = function () { onSettingsChange("CC"); };
 	// Search Bar
 	I("search_categories").onchange = onSearchUpdate;
 	onToggleButton(I("search_hideCompletely"), onSearchUpdate);
@@ -3680,6 +3684,10 @@ function onSettingsChange (hint) {
 		case "RV":
 			md_pref.relatedVideos = I("st_related").value;
 			ui_updateRelatedVideos(); 
+			break;
+		case "CC":
+			md_pref.cacheAudioQuality = I("st_cache_quality").value;
+			md_pref.cacheForceUse = I("st_cache_force").checked;
 			break;
 		default: 
 			break;
@@ -4090,7 +4098,7 @@ function md_updateStreams ()  {
 	md_sources = {};
 	if (md_pref.dash) {
 		md_sources.video = selectedStreams.dashVideo? selectedStreams.dashVideo.url : '';
-		md_sources.audio = yt_video.cache && (md_pref.cacheForceUse || ct_online)? yt_video.cache.url 
+		md_sources.audio = yt_video.cache && (md_pref.cacheForceUse || !ct_online)? yt_video.cache.url 
 			: (selectedStreams.dashAudio? selectedStreams.dashAudio.url : '');
 	} else {
 		md_sources.video = selectedStreams.legacyVideo? selectedStreams.legacyVideo.url : '';
