@@ -2157,7 +2157,7 @@ function yt_extractRelatedVideosObject (videos, results, extData) {
 			};
 			videos.push(relVid); 
 		});
-	} catch (e) { console.error("Failed to extract related videos!", e, videoData); return; }
+	} catch (e) { console.error("Failed to extract related videos!", e, results); return; }
 	
 	try { // Load related infos (session data including itct token)
 		var infos = extData.relatedVideoArgs.split(',').forEach(s => {
@@ -2171,7 +2171,7 @@ function yt_extractRelatedVideosObject (videos, results, extData) {
 				//else console.log("Info about non-existant related video:", vidInfo);
 			}
 		});
-	} catch (e) { console.error("Failed to extract additional related video information!", e, videoData); }
+	} catch (e) { console.error("Failed to extract additional related video information!", e, results); }
 }
 
 /* -------------------- */
