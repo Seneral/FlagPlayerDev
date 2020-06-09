@@ -1274,6 +1274,7 @@ function db_cacheStream () {
 							cachedVideo = db_currentVideoAsCache();
 						cachedVideo.cache = cacheObj;
 						dbVideos.put(cachedVideo).onsuccess = resolve;
+						db_requestPersistence();
 					};
 				});
 			});
