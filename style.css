@@ -1071,21 +1071,28 @@ button {
 /* ---- NOTIFICATIONS -------- */
 /* --------------------------- */
 
-.notificationPanel {
+.notificationContainer {
 	z-index: 9;
 	position: fixed;
 	bottom: 0;
 	right: 0;
 	width: 100%;
 	display: flex;
+	flex-direction: column;
+}
+.notificationPanel {
+	display: flex;
 	line-height: 2em;
 	padding: 0.5em 1em;
 	background-color: var(--bg-sec-color);
 }
+.desktop .notificationContainer {
+	margin: 1em;
+}
 .desktop .notificationPanel {
+	margin-left: auto;
 	max-width: 40em;
 	max-width: fit-content;
-	margin: 1em;
 	border: 1px solid var(--bg-sec-acc-color);
 }
 .notificationDismiss {

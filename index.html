@@ -440,12 +440,22 @@ See https://github.com/Seneral/FlagPlayer for details
 		</div>
 	</div>
 
-	<div class="notificationPanel" id="newVersionPanel" style="display: none;">
-		<div> A new version is available! <button id="newVersionUpdate">Update now</button> </div>
-		<div class="flexSpace"></div>
-		<button class="notificationDismiss icon" id="newVersionClose">
-			<svg viewBox="6 6 36 36"><use href="#svg_cross"/></svg>
-		</button>
+	<div class="notificationContainer">
+		<div class="notificationPanel" id="newVersionPanel" style="display: none;">
+			<div> A new version is available! <button id="newVersionUpdate">Update now</button> </div>
+			<div class="flexSpace"></div>
+			<button class="notificationDismiss icon">
+				<svg viewBox="6 6 36 36"><use href="#svg_cross"/></svg>
+			</button>
+		</div>
+
+		<div class="notificationPanel" id="cacheStreamPanel" style="display: none;">
+			<div> Cached audio stream! <button id="seeCacheButton">See cache</button> </div>
+			<div class="flexSpace"></div>
+			<button class="notificationDismiss icon">
+				<svg viewBox="6 6 36 36"><use href="#svg_cross"/></svg>
+			</button>
+		</div>
 	</div>
 
 	<!-- SVG ICONS -->

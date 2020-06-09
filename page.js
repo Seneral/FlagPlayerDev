@@ -423,8 +423,10 @@ function ct_updatePageState () { // Update page with new information
 	if (ct_page == Page.Home)
 		state.title = "Home | FlagPlayer";
 
-	if (ct_page == Page.Cache)
+	if (ct_page == Page.Cache) {
 		state.title = "Cache | FlagPlayer";
+		url.searchParams.set("view", "cache");
+	}
 
 	if (ct_page == Page.Media) {
 		if (yt_video && yt_video.loaded) state.title = yt_video.meta.title + " | FlagPlayer";
@@ -560,6 +562,12 @@ function ct_loadHome () {
 /* -------------------- */
 /* ---- CACHE --------- */
 /* -------------------- */
+
+function ct_navCache () {
+	ct_beforeNav();
+	ct_view = "cache";
+	ct_performNav();
+}
 
 function ct_loadCache () {
 	db_getCachedVideos()
@@ -1153,7 +1161,7 @@ function db_getCachedVideos () {
 		});
 	})
 }
-function db_getCurrentVideoAsCached() {
+function db_currentVideoAsCache() {
 	if (yt_video == undefined)
 		return undefined;
 	return {
@@ -1250,7 +1258,7 @@ function db_cacheStream () {
 						if (e.target.result)
 							cachedVideo = e.target.result;
 						else // In case current video was never cached
-							cachedVideo = db_getCurrentVideoAsCached();
+							cachedVideo = db_currentVideoAsCache();
 						cachedVideo.cache = cacheObj;
 						dbVideos.put(cachedVideo).onsuccess = resolve;
 					};
@@ -3574,10 +3582,13 @@ function ui_setupEventHandlers () {
 	I("search_categories").onchange = onSearchUpdate;
 	onToggleButton(I("search_hideCompletely"), onSearchUpdate);
 	I("searchContextActions").onchange = onSelectContextAction;
-	// Update Notification
+	// Update Notifications
+	var notifications = document.getElementsByClassName("notificationDismiss");
+	[].forEach.call(notifications, function (d) {
+		d.onclick = function() { d.parentElement.style.display = "none"; };
+	});
 	I("newVersionUpdate").onclick = sw_update;
-	I("newVersionClose").onclick = function () { setDisplay("newVersionPanel", "none")};
-	
+	I("seeCacheButton").onclick = function () { setDisplay("cacheStreamPanel", "none"); ct_navCache(); };
 }
 
 //endregion
@@ -3715,7 +3726,11 @@ function onSelectContextAction (selectedValue, dropdownElement, selectedElement)
 	var selectedValue = selectedValue || "";
 	if (selectedValue == "cmTop") yt_loadTopComments();
 	else if (selectedValue == "cmNew") yt_loadNewComments();
-	else if (selectedValue == "cache") db_cacheStream().catch(function(){});
+	else if (selectedValue == "cache") db_cacheStream().then(function() {
+		setDisplay("cacheStreamPanel", "");
+	}).catch(function(){
+		console.error("Failed to cache audio stream!");
+	});
 	else if (selectedValue.startsWith("cacheDelete-")) db_deleteCachedStream(selectedValue.substring(12)).catch(function(){});
 }
 function onLoadReplies (container, commentID) {
@@ -4454,7 +4469,7 @@ function ht_appendVideoElement (container, index, id, length, prim, sec, tert, c
 				'<img class="liThumbnailImg" src="' + HOST_YT_IMG +  id + '/default.jpg">' +
 				'<span class="liThumbnailInfo"> ' +  length + ' </span>' +
 			'</a>' + 
-			'<a class="liDetail navigation="v=' + id + '" href="' + ct_getNavLink("v=" + id) + '">' + 
+			'<a class="liDetail" navigation="v=' + id + '" href="' + ct_getNavLink("v=" + id) + '">' + 
 				'<span class="twoline liPrimary">' + prim + '</span>' +
 				'<span class="oneline liSecondary">' + sec + '</span>' +
 (tert == undefined?	'' :
