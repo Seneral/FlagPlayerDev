@@ -1336,6 +1336,7 @@ button.contentLoader, span.contentLoader, button.collapser, span.collapser {
 	padding: 0.25em 0.5em;
 	text-align: center !important;
 	color: var(--txt-sec-color) !important;
+	outline: none;
 }
 .barAction.fixed, .contextAction.fixed {
 	min-width: 5em;
