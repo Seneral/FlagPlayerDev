@@ -81,10 +81,10 @@ function S (i,v) { localStorage.setItem(i,v); }
 function G (i) { return localStorage.getItem(i); }
 function setDisplay (i,v) { I(i).style.display = v; }
 Element.prototype.toggleAttr = function toggleAttr(name) {
-    if (this.hasAttribute(name)) {
-    	this.removeAttribute(name);
-    	return false;
-    }
+	if (this.hasAttribute(name)) {
+		this.removeAttribute(name);
+		return false;
+	}
 	this.setAttribute(name, "");
 	return true;
 };
@@ -426,7 +426,8 @@ function ct_updatePageState () { // Update page with new information
 	if (ct_page == Page.Cache) {
 		state.title = "Cache | FlagPlayer";
 		url.searchParams.set("view", "cache");
-	}
+	} else if (url.searchParams.get("view") == "cache")
+		url.searchParams.delete("view");
 
 	if (ct_page == Page.Media) {
 		if (yt_video && yt_video.loaded) state.title = yt_video.meta.title + " | FlagPlayer";
@@ -976,6 +977,17 @@ function ct_stopAutoplay () {
 /* -------------------------------------------------------------------------------------------------------------- */
 //region
 
+function db_requestPersistence() {
+	if ("storage" in navigator && "persist" in navigator.storage) {
+		return navigator.storage.persist()
+		.then(function(success) {
+			if (!success) console.warning("Failed to request persistant storage - playlists and cached videos may be deleted by browser at any point!");
+			return success;
+		});
+	} else {
+		return Promise.reject();
+	}
+}
 function db_access () {
 	return new Promise (function (resolve, reject) {
 		if (!window.indexedDB) {
@@ -1061,6 +1073,7 @@ function db_savePlaylist () {
 	if (yt_playlist) {
 		db_updatePlaylist();
 		ui_setPlaylistSaved (true);
+		db_requestPersistence();
 	}
 }
 function db_removePlaylist () {
@@ -2257,7 +2270,7 @@ function yt_extractVideoCommentObject (commentData, comments, response) {
 				var thread, comm;
 				if (c.commentThreadRenderer) {
 					thread = c.commentThreadRenderer;
-				 	comm = thread.comment.commentRenderer;
+					comm = thread.comment.commentRenderer;
 				} else comm = c.commentRenderer;
 				var comment = {
 					id: comm.commentId,
@@ -3195,7 +3208,7 @@ function ui_checkPlaylist () {
 
 function ui_isMouseIn (mouse, element) {
 	var rect = element.getBoundingClientRect();
-  	return mouse.clientX >= rect.left && mouse.clientX <= rect.right && mouse.clientY >= rect.top && mouse.clientY <= rect.bottom;
+	return mouse.clientX >= rect.left && mouse.clientX <= rect.right && mouse.clientY >= rect.top && mouse.clientY <= rect.bottom;
 }
 function ui_isInCascade (parent, element, steps) {
 	while (element && steps-- > 0) {
@@ -3348,7 +3361,7 @@ function ui_updateSlider (mouse) {
 		if (!sliderValue) return;
 		var sliderKnob = ui_dragSliderElement.getElementsByClassName("sliderKnob")[0];
 		var sliderRect = ui_dragSliderElement.getBoundingClientRect();
-	  	var sliderPos = Math.min(1, Math.max(0, (mouse.clientX - sliderRect.left) / sliderRect.width));
+		var sliderPos = Math.min(1, Math.max(0, (mouse.clientX - sliderRect.left) / sliderRect.width));
 		sliderValue.style.width = sliderPos*100 + "%";
 		sliderKnob.style.left = sliderPos*100 + "%";
 		ui_dragSliderElement.value = sliderPos;
@@ -3425,7 +3438,7 @@ function ui_updateTimelinePeeking (mouse) {
 	}
 	if (mouse) {
 		var timelineRect = timelineControl.getBoundingClientRect();
-	  	var timelinePeekPos = Math.min(1, Math.max(0, (mouse.clientX - timelineRect.left) / timelineRect.width));
+		var timelinePeekPos = Math.min(1, Math.max(0, (mouse.clientX - timelineRect.left) / timelineRect.width));
 		if (md_state == State.Started && md_flags.seeking) {
 			if ((mouse.buttons & 1) != 0 && ui_isMouseIn(mouse, document.body)) {
 				md_updateTime(timelinePeekPos * md_totalTime);
