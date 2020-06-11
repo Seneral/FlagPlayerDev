@@ -1982,7 +1982,7 @@ function yt_extractVideoMetadata(page, video) {
 		};
 		meta.allowRatings = videoDetail.allowRatings;
 		
-	} catch (e) { console.error("Failed to read primary video metadata!", e, videoDetail); }
+	} catch (e) { console.error("Failed to read primary video metadata!", e, page.config.args.player_response); }
 
 	if (!page.initialData) {
 		console.warn("Can't extract video metadata without initial data!", page);
@@ -2300,12 +2300,12 @@ function yt_extractVideoCommentObject (commentData, comments, response) {
 				}
 				comments.push(comment);
 			});
-		} catch (e) { console.error("Failed to extract comments!", e, data); }
+		} catch (e) { console.error("Failed to extract comments!", e, commentData); }
 	}
 
 	try {
 		commentData.conToken = contents.continuations? contents.continuations[0].nextContinuationData.continuation : undefined;
-	} catch (e) { console.error("Failed to extract comment continuation!", e, data); }
+	} catch (e) { console.error("Failed to extract comment continuation!", e, commentData); }
 }
 
 /* ------------------------------------------------- */
@@ -3932,6 +3932,7 @@ function onKeyDown (keyEvent) {
 			onControlPrev();
 			break;
 		default:
+			pass = true;
 			break;
 		}	
 	} else if (keyEvent.ctrlKey) {
