@@ -1006,7 +1006,7 @@ function db_requestPersistence() {
 	if ("storage" in navigator && "persist" in navigator.storage) {
 		return navigator.storage.persist()
 		.then(function(success) {
-			if (!success) console.warning("Failed to request persistant storage - playlists and cached videos may be deleted by browser at any point!");
+			if (!success) console.warn("Failed to request persistant storage - playlists and cached videos may be deleted by browser at any point!");
 			return success;
 		});
 	} else {
@@ -1251,7 +1251,7 @@ function db_getCachedVideos () {
 		});
 	});
 }
-function db_cacheStream () {
+function db_cacheStream (progress) {
 	if (!yt_video.ready) return Promise.reject();
 	if (!md_sources || !md_sources.audio) return Promise.reject();
 	if (!("serviceWorker" in navigator) || !sw_current) {
@@ -1276,18 +1276,37 @@ function db_cacheStream () {
 
 			cacheObj.size = parseInt(response.headers.get("content-length"));
 			console.log("Downloaded video stream! Size: " + ui_shortenBytes(cacheObj.size));
+			if (progress) progress(0,cacheObj.size);
+
+			// Split stream to cache and progress streams
+			var dataStreams = response.body.tee();
 			
 			// Add to cache
-			var cacheWrite = cache.put(cacheObj.url, new Response(response.body, {
+			var cacheWrite = cache.put(cacheObj.url, new Response(dataStreams[0], {
 				status: 200,
 				headers: {
 					"content-length": response.headers.get("content-length"),
 					"content-type": response.headers.get("content-type"),
 				},
-			}));
+			})).then(function() {
+				console.log("Finished downloading!");
+			});
 
+			var progressWatch = new Promise(async function(resolve, reject) {
+				const reader = dataStreams[1].getReader();
+				let bytesReceived = 0;
+				while (true) {
+					const result = await reader.read();
+					if (result.done) return resolve();
+					bytesReceived += result.value.length;
+					if (progress) progress(bytesReceived, cacheObj.size);
+				}
+			});
+
+			return Promise.all([cacheWrite, progressWatch])
 			// Add to database
-			var databaseWrite = db_access().then(function () {
+			.then(db_access)
+			.then(function () {
 				var dbVideos = db_database.transaction("videos", "readwrite").objectStore("videos");
 				return new Promise (function (resolve, reject) {
 					dbVideos.get(cacheID).onsuccess = function (e) {
@@ -1301,9 +1320,7 @@ function db_cacheStream () {
 						db_requestPersistence();
 					};
 				});
-			});
-
-			return Promise.all([cacheWrite, databaseWrite]);
+			})
 		});
 	});
 }
@@ -2768,7 +2785,8 @@ function ui_openSettings () {
 	I("st_corsHost").value = ct_pref.corsAPIHost;
 	I("st_cache_quality").value = ct_pref.cacheAudioQuality;
 	I("st_cache_force").checked = ct_pref.cacheForceUse;
-	db_getCachedVideos().then(function() {
+	db_getCachedVideos().then(function(cachedVideos) {
+		db_cachedVideos = cachedVideos;
 		I("st_cache_usage").innerText = ui_shortenBytes(db_getCacheSize());
 	});
 }
@@ -3780,8 +3798,14 @@ function onSelectContextAction (selectedValue, dropdownElement, selectedElement)
 	if (selectedValue == "cmTop") yt_loadTopComments();
 	else if (selectedValue == "cmNew") yt_loadNewComments();
 	else if (selectedValue == "cache") 
-		db_cacheStream()
-		.then(function() { setDisplay("cacheStreamPanel", ""); })
+		db_cacheStream(function(bytesReceived, bytesTotal) {
+			setDisplay("cacheStreamPanel", "");
+			I("cacheStreamPanel").children[0].children[0].innerText = "Downloading " + ui_shortenBytes(bytesReceived) + "/" + ui_shortenBytes(bytesTotal) + "!";
+		})
+		.then(function() { 
+			setDisplay("cacheStreamPanel", "");
+			I("cacheStreamPanel").children[0].children[0].innerText = "Finished downloading!";
+		})
 		.catch(function(){ console.error("Failed to cache audio stream!"); });
 	else if (selectedValue == "linkAudio" && yt_video && yt_video.ready)
 		window.open(md_selectStream(md_selectableStreams().dashAudio, "BEST", md_daVal).url);
