@@ -1277,7 +1277,7 @@ function db_getCachedVideos () {
 }
 function db_cacheStream (video, progress) {
 	if (!video.ready) return Promise.reject({ message: "Video not ready!" });
-	//if (!("serviceWorker" in navigator) || !sw_current) return Promise.reject({ message: "No Service Worker - reload!"});
+	if (!("serviceWorker" in navigator) || !sw_current) return Promise.reject({ message: "No Service Worker - reload!"});
 
 	var cacheID = video.videoID;
 	var stream = md_selectStream(md_selectableStreams(video).dashAudio, ct_pref.cacheAudioQuality, md_daVal);
@@ -3760,8 +3760,8 @@ function onHistoryChange () {
 /* -- BUTTON HANDLERS -	*/
 /* -------------------- */
 
-function onSettingsToggle(override = undefined) {
-	ct_temp.settings = override != undefined? override : !ct_temp.settings;
+function onSettingsToggle() {
+	ct_temp.settings = !ct_temp.settings;
 	if (ct_temp.settings) {
 		//if (md_state == State.Started) // Pause if playing
 		//	ct_mediaPlayPause(true, true);
@@ -3956,7 +3956,8 @@ function onMouseClick (mouse) {
 			nav = nav.parentElement;
 		var match = nav.getAttribute("navigation").match(/^(.*?)=(.*)$/);
 		if (match) {
-			onSettingsToggle(false);
+			ct_temp.settings = false;
+			ui_closeSettings ();
 			switch (match[1]) {
 				case "v":  ct_navVideo(match[2]); break;
 				case "u": ct_navChannel({ user: match[2] }); break;
