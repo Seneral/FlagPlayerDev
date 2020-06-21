@@ -162,11 +162,12 @@ var md_paused = true; // Current state or intent
 var md_flags = { buffering: false, seeking: false } // Only valid during State.Started
 var md_isPlaying = function () { return md_sources && md_state == State.Started && !md_paused && !md_flags.buffering && !md_flags.seeking; };
 var md_curTime = 0, md_totalTime = 0;
+var md_errorText = "An Error occured!"; // Error message if md_state == State.Error
 var md_pref = {}; // volume, muted, playlistRandom, autoplay, dash, dashVideo, dashContainer, legacyVideo
 
 /* YOUTUBE CONTENT */
 var yt_url; // URL of respective youtube content
-var yt_page; // cookies {}, secrets {}, initialData {}, playerConfig {}, videoDetail {}, html "", object {}
+var yt_page; // cookies {}, secrets {}, initialData {}, playerConfig {}, videoDetail {}, html "", object {}, unavailable
 	// secrets: csn, xsrfToken, idToken, innertubeAPIKey, clientName, clientVersion, pageCL, pageLabel, variantsChecksum, visitorData, ...
 // Playlist
 var yt_playlistID;
@@ -765,10 +766,10 @@ function ct_loadMedia () {
 	var loadingID = yt_videoID;
 	// Load and display cached data
 	var cacheLoad = db_getVideo(yt_videoID).then(function (video) {
-		if (!yt_video || loadingID != yt_videoID) return;
+		if (!yt_video || loadingID != yt_videoID) return Promise.reject();
 		yt_video.cached = true;
 		yt_video.cache = video.cache;
-		if (yt_video.meta != undefined) return;
+		if (yt_video.meta != undefined) return Promise.resolve();
 		yt_video.meta = {
 			title: video.title,
 			uploader: {
@@ -783,12 +784,15 @@ function ct_loadMedia () {
 			dislikes: video.dislikes,
 		};
 		ui_setVideoMetadata();
+		return Promise.resolve();
 	}).catch(function() {});
 	// Load, parse and display online video data
 	yt_loadVideoData(yt_videoID, false)
 	// Initiate further control
 	.then(function() {
 		ct_online = true;
+		if (yt_video.unavailable)
+			throw new ParseError(16, "Video is unavailable!", false);
 		if (yt_video.blocked)
 			throw new MDError(11, "Video is blocked in your country!", false);
 		if (yt_video.ageRestricted) 
@@ -814,24 +818,20 @@ function ct_loadMedia () {
 	.catch(function(error) {
 		if (!error) return; // Silent fail when request has gone stale (new page loaded before this finished)
 		if ((error.name == "TypeError" && error.message.includes("fetch")) || error instanceof NetworkError) {
-			var useCache = function () {
-				console.log("Offline - Cache Fallback!");
-				yt_video.streams = [];
-				ct_mediaLoaded();
-			};
-			var skipVideo = function () {
-				ct_online = false;
+			ct_online = false;
+			cacheLoad.then(function() {
+				if (yt_video.cache != undefined) {
+					console.log("Offline - Cache Fallback!");
+					yt_video.streams = [];
+					ct_mediaLoaded();
+					ct_updatePageState();
+					//ui_setVideoMetadata(); // Already done in cacheLoad
+					ui_setupMediaSession();
+				}
+				else Promise.reject();
+			}).catch (function() {
 				ct_mediaError(new MDError(14, "Offline", false));
-			};
-			if (yt_video.cached) {
-				if (yt_video.cache != undefined) useCache();
-				else skipVideo();
-			} else {
-				cacheLoad.then(function () {
-					if (yt_video.cache != undefined) useCache();
-					else skipVideo();
-				}).catch (skipVideo);
-			}
+			});
 		}
 		else {
 			ct_mediaError(error);
@@ -906,6 +906,7 @@ function ct_mediaError (error) {
 	md_paused = true;
 	md_flags.buffering = false;
 	md_flags.seeking = false;
+	md_errorText = error.message;
 	ui_updatePlayerState();
 
 	if (error instanceof MDError && !error.minor)
@@ -1386,23 +1387,30 @@ function yt_browse (subPath) {
 		.then (function (html) {
 			var page = {};
 			page.html = html;
+			page.isDesktop = false;
 
 			try { 
 				var match = page.html.match (/window\["ytInitialData"\]\s*=\s*({.*?});/);
-				if (!match) match = page.html.match (/<div\s+id="initial-data">\s*<!--\s*({.*?})\s*-->\s*<\/div>/);
+				if (!match) {
+					match = page.html.match (/<div\s+id="initial-data">\s*<!--\s*({.*?})\s*-->\s*<\/div>/);
+					if (match) page.isDesktop = true;
+				}
 				page.initialData = JSON.parse(match[1]); 
 			} catch (e) { console.error("Failed to get initial data!", e); }
 
 			try { page.configParams = JSON.parse(page.html.match (/ytcfg\.set\s*\(({.*?})\);/)[1]); 
 			} catch (e) { console.error("Failed to get config params!", e); }
 
-			// Whether YouTube thinks this is mobile - independant from ct_isDesktop, which is this apps opinion
-			page.isDesktop = !page.initialData || Object.keys(page.initialData.contents).some(function (s) { return s.startsWith("twoColumn"); });
-
 			// Check if cors host is used
 			if (ct_isAdvancedCorsHost == undefined)
 				ct_isAdvancedCorsHost = response.headers.has("x-set-cookies");
 
+			// Check if page (or video) is unavailable
+			page.unavailable = !page.initialData || !page.initialData.contents;
+
+			// Whether YouTube thinks this is mobile - independant from ct_isDesktop, which is this apps opinion
+			//page.isDesktop = Object.keys(page.initialData.contents).some(function (s) { return s.startsWith("twoColumn"); });
+			
 			// Extract youtube secrets
 			page.secrets = {};
 			
@@ -1964,7 +1972,9 @@ function yt_loadVideoData(id, background) {
 		if (!background && (ct_page != Page.Media || video != yt_video))
 			return Promise.reject(); // Request has gone stale
 		if (!background) yt_page = page;
+		video.unavailable = page.unavailable;
 		try { // Parse player config
+			if (video.unavailable) throw new Error();
 			var match = page.html.match (/;\s*ytplayer\.config\s*=\s*({.*?});/);
 			if (!match) match = page.html.match (/ytInitialPlayerConfig\s*=\s*({.*?});/); // Mobile
 			page.config = JSON.parse(match[1]);
@@ -1972,8 +1982,8 @@ function yt_loadVideoData(id, background) {
 		} catch (e) {
 			if (!page.html.includes('id="player-api"'))
 				return Promise.reject(new ParseError("Failed to parse JSON and no player-api found!"), 21, page.html);
-			// Video blocked
-			video.blocked = true;
+			// Video blocked or unavailable
+			video.blocked = !video.unavailable;
 			// Attempt to get metadata through separate request
 			return fetch(ct_pref.corsAPIHost + HOST_YT + "/get_video_info?ps=default&video_id=" + id)
 			.then (function(data) {
@@ -1995,12 +2005,16 @@ function yt_loadVideoData(id, background) {
 		// Check age restriction
 		video.ageRestricted = page.html.indexOf("og:restrictions:age") != -1;
 		// Check playability (blocked, age restricted, etc.)
-		video.status = page.config.args.player_response.playabilityStatus.status;
+		var status = page.config.args.player_response.playabilityStatus;
+		video.status = status.status == "OK"? "OK" : (status.status + ": " + status.reason);
 
 		// Extract metadata
-		video.meta = yt_extractVideoMetadata(page);
+		if (video.unavailable)
+			video.meta = {};
+		else
+			video.meta = yt_extractVideoMetadata(page);
 
-		if (!video.blocked) {
+		if (!video.blocked && !video.unavailable) {
 			// Extract related videos
 			video.related = yt_extractRelatedVideoData(page.initialData);
 			// Extract comments
@@ -2662,6 +2676,8 @@ function ui_updatePlayerState () {
 	I("playButton").setAttribute("state", md_paused? "off" : "on");
 	setDisplay("bufferingIndicator", md_state == State.Loading || (md_state == State.Started && md_flags.buffering)? "block" : "none");
 	setDisplay("errorIndicator", md_state == State.Error? "block" : "none");
+	I("errorMessage").children[0].innerText = md_errorText;
+	setDisplay("errorMessage", md_state == State.Error? "block" : "none");
 	setDisplay("endedIndicator", md_state == State.Ended? "block" : "none");
 	setDisplay("nextLoadIndicator", "none");
 	setDisplay("startPlayIndicator", md_state == State.PreStart? "block" : "none");
@@ -2967,7 +2983,7 @@ function ui_setVideoMetadata() {
 	if (yt_video.loaded && ct_pref.loadComments)
 	{
 		sec_comments.style.display = "block";
-		if (!ct_isDesktop) // can't sort comments on mobile
+		if (!yt_page.isDesktop) // can't sort comments on mobile
 			I("commentContextActions").style.display = "none"; 
 	}
 	
@@ -4500,7 +4516,7 @@ function md_assureSync () {
 //region
 
 class ParseError extends Error {
-	constructor (message, code, object) {
+	constructor (code, message, object) {
 		super (message);
 		this.name = "ParseError";
 		this.code = code;
