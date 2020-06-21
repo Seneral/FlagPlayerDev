@@ -828,9 +828,9 @@ function ct_loadMedia () {
 					//ui_setVideoMetadata(); // Already done in cacheLoad
 					ui_setupMediaSession();
 				}
-				else Promise.reject();
+				else return Promise.reject();
 			}).catch (function() {
-				ct_mediaError(new MDError(14, "Offline", false));
+				ct_mediaError(new MDError(14, "Offline: " + error.message, false));
 			});
 		}
 		else {
