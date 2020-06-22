@@ -119,7 +119,7 @@ self.addEventListener('fetch', function(event) {
 					// Cache if desired
 					if (url.startsWith(BASE + "/favicon")) {
 						var cacheResponse = response.clone();
-						event.waitUntil(caches.open(APP_CACHE).then((cache) => return cache.put(event.request, cacheResponse)));
+						event.waitUntil(caches.open(APP_CACHE).then(cache => cache.put(event.request, cacheResponse)));
 					}
 					return response;
 				}).catch(function(error) {});
