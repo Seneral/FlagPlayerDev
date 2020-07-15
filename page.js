@@ -3367,6 +3367,7 @@ function ui_resetChannelUploads () {
 
 function ui_setupPlaylist () {
 	ui_plScrollPos = 0;
+	ui_plScrollDirty = true;
 	I("plTitle").innerText = "";
 	I("plDetail").innerText = "";
 	sec_playlist.style.display = "block";
@@ -3397,6 +3398,7 @@ function ui_addToPlaylist (startIndex) {
 	if (focusIndex != undefined) ui_setPlaylistPosition (focusIndex);
 	ht_playlistVideos.onscroll = function () {
 		ui_plScrollPos = ht_playlistVideos.scrollTop;
+		ui_plScrollDirty = false;
 		ui_checkPlaylist();
 	};
 	sec_playlist.onCollapse = function (collapsed) { // Triggered by collapser
@@ -3416,6 +3418,7 @@ function ui_resetPlaylist () {
 	if (!ct_isDesktop) sec_playlist.setAttribute("collapsed", "");
 	sec_playlist.style.display = "none";
 	ui_plScrollPos = 0;
+	ui_plScrollDirty = true;
 }
 function ui_setPlaylistPosition(index) {
 	ui_plScrollPos = Math.max(0, 60 * index - 40);
