@@ -383,6 +383,9 @@ function ct_resetContent () {
 	ct_mediaUnload();
 	ui_resetHome();
 	ui_resetCache();
+	// If on mobile, collapse playlist
+	if (!ct_isDesktop) sec_playlist.setAttribute("collapsed", "");
+
 }
 function ct_loadContent () {
 	// Primary Content
@@ -607,7 +610,6 @@ function ct_cacheVideo(video) {
 
 function ct_loadPlaylist (plID) {
 	if (!plID) plID = yt_playlistID;
-	if (!ct_isDesktop) sec_playlist.setAttribute("collapsed", "");
 	if (yt_playlist && plID == yt_playlistID) return;
 	yt_playlistID = plID;
 	yt_playlist = undefined;
@@ -2731,7 +2733,7 @@ function ui_updatePageLayout (forceRebuild = false) {
 		document.body.classList.add("desktop");
 		document.body.classList.remove("mobile");
 		// Uncollapse playlist on desktop by default
-		I("playlist").removeAttribute("collapsed");
+		sec_playlist.removeAttribute("collapsed");
 	}
 	if (!ct_isDesktop && (setDesktop || forceRebuild)) {
 		ht_container.insertBefore(sec_player, ht_container.firstChild);
@@ -3411,7 +3413,7 @@ function ui_resetPlaylist () {
 	ht_playlistVideos.innerHTML = "";
 	ht_playlistVideos.removeAttribute("top-loaded");
 	ht_playlistVideos.removeAttribute("bottom-loaded");
-	sec_playlist.setAttribute("collapsed", "");
+	if (!ct_isDesktop) sec_playlist.setAttribute("collapsed", "");
 	sec_playlist.style.display = "none";
 	ui_plScrollPos = 0;
 }
