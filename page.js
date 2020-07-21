@@ -2159,6 +2159,7 @@ function yt_loadVideoData(id, background) {
 				return page;
 			}).catch (function () {
 				video.streams = [];
+				ct_mediaError(new ParseError(17, "Failed to parse streams!"), false);
 				return page;
 			});
 			
@@ -2554,8 +2555,11 @@ function yt_decodeStreams (config) {
 		}).then(function(jsSRC) {
 			// Get list of functions applied on the cipher in jsSRC code
 			var tFuncCalls = jsSRC.match (/=function\(\w\)\{\w=\w\.split\(""\);(.*?);return \w\.join\(""\)\};/)[1].split(';');
+			// Get name of object containing the function definition and escape it
+			var tFuncObjName = tFuncCalls[0].split('.')[0];
+			tFuncObjName = tFuncObjName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 			// Get list of function definitions out of the containing object in jsSRC code
-			var tFuncDefs = jsSRC.match (new RegExp("var " + tFuncCalls[0].split('.')[0] + "=\\{([\\s\\S]*?)\\};"))[1].split(/,[\n\r]/);
+			var tFuncDefs = jsSRC.match(new RegExp("var " + tFuncObjName + "=\\{([\\s\\S]*?)\\};"))[1].split(/,[\n\r]/);
 			// Create mapping between jsSRC function name and sanitized implementation name
 			var transformMap = {};
 			for (var i = 0; i < tFuncDefs.length; i++) {
