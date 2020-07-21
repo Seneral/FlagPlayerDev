@@ -830,6 +830,8 @@ function ct_loadMedia () {
 			throw new MDError(12, "Video is age restricted!", false);
 		if (yt_video.status != "OK") 
 			throw new MDError(13, "Playability Status: " + yt_video.status, false);
+		if (yt_video.streams.length == 0)
+			throw new MDError(17, "Failed to parse streams!");
 		console.log("YT Video:", yt_video);
 
 		ct_mediaLoaded();
@@ -2159,7 +2161,6 @@ function yt_loadVideoData(id, background) {
 				return page;
 			}).catch (function () {
 				video.streams = [];
-				ct_mediaError(new ParseError(17, "Failed to parse streams!"), false);
 				return page;
 			});
 			
