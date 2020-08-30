@@ -899,8 +899,8 @@ function ct_mediaLoaded () {
 		else md_state = State.Loading; // Stay in Loading until video actually starts
 		md_totalTime = yt_video.meta.length;
 		md_curTime = parseInt(new URL(window.location.href).searchParams.get("t")) || 0;
-		ui_updateTimelineProgress();
 		md_updateStreams(); // Fires ct_mediaReady or ct_mediaError eventually
+		ui_updateTimelineProgress();
 	}
 }
 function ct_mediaReady () {
@@ -4439,6 +4439,8 @@ function md_updateStreams ()  {
 	}
 	if (videoMedia.src != md_sources.video) loadStream(videoMedia, md_sources.video);
 	if (audioMedia.src != md_sources.audio) loadStream(audioMedia, md_sources.audio);
+	if (audioMedia.src && audioMedia.src != '') md_totalTime = audioMedia.duration;
+	else if (videoMedia.src && videoMedia.src != '') md_totalTime = videoMedia.duration;
 	ui_updatePlayerState();
 	md_checkStartMedia();
 }
