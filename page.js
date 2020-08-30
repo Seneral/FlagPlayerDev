@@ -2150,10 +2150,10 @@ function yt_loadVideoData(id, background) {
 		video.status = status.status == "OK"? "OK" : (status.status + ": " + status.reason);
 
 		// Extract metadata
-		if (video.unavailable)
-			video.meta = {};
-		else
+		if (!video.unavailable)
 			video.meta = yt_extractVideoMetadata(page);
+		else if (!video.meta)
+			video.meta = {};
 
 		if (!video.blocked && !video.unavailable) {
 			// Extract related videos
