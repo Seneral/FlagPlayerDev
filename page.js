@@ -4420,7 +4420,8 @@ function md_updateStreams ()  {
 	if (md_pref.dash) {
 		md_sources.video = selectedStreams.dashVideo? selectedStreams.dashVideo.url : '';
 		md_sources.audio = yt_video.cache && (ct_pref.cacheForceUse || !ct_online)? yt_video.cache.url 
-			: (selectedStreams.dashAudio? selectedStreams.dashAudio.url : '');
+			: (selectedStreams.dashAudio? selectedStreams.dashAudio.url
+					: (yt_video.cache? yt_video.cache.url : ''));
 	} else {
 		md_sources.video = selectedStreams.legacyVideo? selectedStreams.legacyVideo.url : '';
 		md_sources.audio = '';
