@@ -1522,16 +1522,25 @@ function yt_browse (subPath) {
 			var page = {};
 			page.html = html;
 			page.isDesktop = true;
-
 			try { 
+				var initialDataRaw;
 				var match = page.html.match (/var\s*ytInitialData\s*=\s*({.*?});/);
-				if (!match) {
-					match = page.html.match (/<div\s+id="initial-data">\s*<!--\s*({.*?})\s*-->\s*<\/div>/);
-					if (match) page.isDesktop = false;
-				}
 				if (!match)
 					match = page.html.match (/window\["ytInitialData"\]\s*=\s*({.*?});/);
-				page.initialData = JSON.parse(match[1]);
+				if (!match) {
+					match = page.html.match (/var\s*ytInitialData\s*=\s*'(.*?)';/);
+					if (match)
+					{ // Do manual decodeURIComponent except that \x** is used instead of %** (although there are also those used within the text)
+						initialDataRaw = match[1].replace(/\\x[0-9A-Fa-f]{2}/g, (m) => {
+							return String.fromCharCode(parseInt(m.substring(2, 5), 16));
+						});
+						initialDataRaw = initialDataRaw.replace(/\\(.)/g, "$1");
+					}
+					else
+						match = page.html.match (/<div\s+id="initial-data">\s*<!--\s*({.*?})\s*-->\s*<\/div>/);
+					if (match) page.isDesktop = false;
+				}
+				page.initialData = JSON.parse(initialDataRaw? initialDataRaw : match[1]);
 			} catch (e) { console.error(page.error = "Failed to get initial data!", e); }
 
 			try { page.configParams = JSON.parse(page.html.match (/ytcfg\.set\s*\(({.*?})\);/)[1]); 
