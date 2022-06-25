@@ -2610,6 +2610,12 @@ function yt_extractVideoCommentData (initialData) {
 			} else {
 				comments.unavailable = true;
 			}
+
+			try { // Only to extract MORE accurate comment count
+				var extCommentData = initialData.contents.singleColumnWatchNextResults.results.results.contents.find(c => c.itemSectionRenderer).itemSectionRenderer;
+				extCommentData = extCommentData.contents.find(c => c.commentsEntryPointHeaderRenderer).commentsEntryPointHeaderRenderer;
+				comments.count = yt_parseNum(yt_parseLabel(extCommentData.headerText));
+			} catch(e) {}
 		}
 	} catch (e) { ct_mediaError(new ParseError(130, "Failed to extract video comment data: '" + e.message + "'!", true)); }
 	

@@ -6,7 +6,7 @@ Licensed under AGPLv3
 See https://github.com/Seneral/FlagPlayer for details
 */
 
-var VERSION = 28;
+var VERSION = 29;
 var APP_CACHE = "flagplayer-cache-1";
 var IMG_CACHE = "flagplayer-thumbs";
 var MEDIA_CACHE = "flagplayer-media";
@@ -118,21 +118,25 @@ self.addEventListener('fetch', function(event) {
 	else {
 		event.respondWith(
 			caches.match(event.request)
-			.then(function(response) {
-				// From cache
-				if (response) return response;
-				// Fetch from net
-				return fetch(event.request).then(function(response) {
-					if (!response || (response.status !== 200 && response.status !== 0) || response.type == 'error')
+				.then(function(response) {
+					// From cache
+					if (response)
 						return response;
-					// Cache if desired
-					if (url.startsWith(BASE + "/favicon")) {
-						var cacheResponse = response.clone();
-						event.waitUntil(caches.open(APP_CACHE).then(cache => cache.put(event.request, cacheResponse)));
-					}
-					return response;
-				}).catch(function(error) {});
-			})
+					throw new Error();
+				})
+				.catch(function() {
+					// Fetch from net
+					return fetch(event.request).then(function(response) {
+						if (!response || (response.status !== 200 && response.status !== 0) || response.type == 'error')
+							return response;
+						// Cache if desired
+						if (url.startsWith(BASE + "/favicon")) {
+							var cacheResponse = response.clone();
+							event.waitUntil(caches.open(APP_CACHE).then(cache => cache.put(event.request, cacheResponse)));
+						}
+						return response;
+					}).catch(function(error) {});
+				})
 		);
 	}
 });
