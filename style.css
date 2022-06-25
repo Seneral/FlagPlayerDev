@@ -1,3 +1,11 @@
+/*
+FlagPlayer - A lightweight YouTube frontend
+Copyright (C) 2019  Seneral
+
+Licensed under AGPLv3
+See https://github.com/Seneral/FlagPlayer for details
+*/
+
 :root {
 }
 body { /* Light Skin */
@@ -125,6 +133,7 @@ a, a:visited, a:hover, a:active {
 	background-color: var(--ctrl-bg-ter-color);
 	border: 1px solid var(--ctrl-bg-color);
 	color: var(--ctrl-color);
+	width: 100%;
 }
 .searchButton {
 	flex-grow: 0;
@@ -180,7 +189,7 @@ a, a:visited, a:hover, a:active {
 /* Modify playlist behaviour on mobile to occupy fullscreen */
 /* Not critical if :not not supported, no mobile-first here */
 .mobile .section.playlist.collapsable:not([collapsed]) {
-	display: flex !important;
+	display: flex;
 	flex-direction: column;
 	z-index: 10;
 	position: fixed;
@@ -620,6 +629,7 @@ a, a:visited, a:hover, a:active {
 /* --------------------------- */
 
 .section.playlist {
+	display: block;
 	background-color: var(--bg-sec-color);
 	border: 1px solid var(--bg-sec-acc-color);
 	overflow: hidden;
@@ -684,6 +694,10 @@ a, a:visited, a:hover, a:active {
 	margin: 6px 0;
 }
 .playlist .liThumbnail {
+	width: 96px;
+	height: 54px;
+}
+.playlist .liThumbnailImg {
 	width: 96px;
 	height: 54px;
 }
