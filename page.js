@@ -1591,13 +1591,12 @@ function yt_browse (subPath) {
 					match = page.html.match (/var\s*ytInitialData\s*=\s*'(.*?)';/);
 					if (match)
 					{ // Do manual decodeURIComponent except that \x** is used instead of %** (although there are also those used within the text)
-						/*initialDataRaw = match[1].replace(/\\x[0-9A-Fa-f]{2}/g, (m) => {
+						initialDataRaw = match[1].replace(/\\x[0-9A-Fa-f]{2}/g, (m) => {
 							return String.fromCharCode(parseInt(m.substring(2, 5), 16));
 						});
-						initialDataRaw = initialDataRaw.replace(/\\(.)/g, "$1");*/
-						initialDataRaw = decodeURIComponent(initialDataRaw); // Seems to work on Chrome and Firefox by now
+						initialDataRaw = initialDataRaw.replace(/\\(.)/g, "$1");
 					}
-					else // Not sure if this is needed anymore
+					else
 						match = page.html.match (/<div\s+id="initial-data">\s*<!--\s*({.*?})\s*-->\s*<\/div>/);
 					if (match) page.isDesktop = false;
 				}
@@ -2542,64 +2541,36 @@ function yt_extractVideoCommentData (initialData) {
 			isr = isr.map(c => c.itemSectionRenderer);
 			if (isr.length > 1) isr = isr.filter(c => c.sectionIdentifier && c.sectionIdentifier.includes("comment"));
 			commentData = isr.length > 0? isr[0] : null;
-			if (commentData) {
-				if (commentData.continuations) {
-					comments.continuation = {
-						conToken: commentData.continuations[0].nextContinuationData.continuation,
-						itctToken: commentData.continuations[0].nextContinuationData.clickTrackingParams
-					};
-				} else {
-					var con = commentData.contents.filter(c => c.continuationItemRenderer);
-					if (con.length > 0) {
-						comments.continuation = {
-							conToken: con[0].continuationItemRenderer.continuationEndpoint.continuationCommand.token,
-							itctToken: con[0].continuationItemRenderer.continuationEndpoint.clickTrackingParams
-						};
-					} else {
-						comments.deactivated = true;
-					}
-				}
-				if (commentData.header) { // Mobile only
-					comments.count = yt_parseNum(commentData.header.commentSectionHeaderRenderer.countText.runs[1].text);
-					comments.sorted = "TOP"; // No way to select sorting on mobile website (only on app)
-				}
-			} else {
-				comments.deactivated = true;
-			}
 		}
 		else if (initialData.contents.singleColumnWatchNextResults) {
-			/*var csr = initialData.contents.singleColumnWatchNextResults.results.results.contents
-				.filter(c => c.itemSectionRenderer).map(c => c.itemSectionRenderer)
-				.filter(c => c.contents.find(h => h.commentsEntryPointHeaderRenderer))
-				.map(c => c.contents.find(h => h.commentsEntryPointHeaderRenderer));
-			commentData = csr.length > 0? csr[0] : null;*/
-			commentData = initialData.engagementPanels.find(p => p.engagementPanelSectionListRenderer && p.engagementPanelSectionListRenderer.panelIdentifier == "engagement-panel-comments-section")
-			commentData.engagementPanelSectionListRenderer.
-
-			if (commentData) {
-				if (commentData.continuations) {
+			var csr = initialData.contents.singleColumnWatchNextResults.results.results.contents.filter(c => c.commentSectionRenderer);
+			csr = csr.map(c => c.commentSectionRenderer);
+			if (csr.length > 1) csr = csr.filter(c => c.sectionIdentifier && c.sectionIdentifier.includes("comment")); // TODO: Check if needed
+			commentData = csr.length > 0? csr[0] : null;
+		}
+		if (commentData) {
+			if (commentData.continuations) {
+				comments.continuation = {
+					conToken: commentData.continuations[0].nextContinuationData.continuation,
+					itctToken: commentData.continuations[0].nextContinuationData.clickTrackingParams
+				};
+			} else {
+				var con = commentData.contents.filter(c => c.continuationItemRenderer);
+				if (con.length > 0) {
 					comments.continuation = {
-						conToken: commentData.continuations[0].nextContinuationData.continuation,
-						itctToken: commentData.continuations[0].nextContinuationData.clickTrackingParams
+						conToken: con[0].continuationItemRenderer.continuationEndpoint.continuationCommand.token,
+						itctToken: con[0].continuationItemRenderer.continuationEndpoint.clickTrackingParams
 					};
 				} else {
-					var con = commentData.contents.filter(c => c.continuationItemRenderer);
-					if (con.length > 0) {
-						comments.continuation = {
-							conToken: con[0].continuationItemRenderer.continuationEndpoint.continuationCommand.token,
-							itctToken: con[0].continuationItemRenderer.continuationEndpoint.clickTrackingParams
-						};
-					} else {
-						comments.deactivated = true;
-					}
+					comments.deactivated = true;
 				}
-				if (commentData.header) { // Mobile only
-					comments.count = yt_parseNum(commentData.header.commentSectionHeaderRenderer.countText.runs[1].text);
-					comments.sorted = "TOP"; // No way to select sorting on mobile website (only on app)
-				}
-			} else {
-				comments.deactivated = true;
 			}
+			if (commentData.header) { // Mobile only
+				comments.count = yt_parseNum(commentData.header.commentSectionHeaderRenderer.countText.runs[1].text);
+				comments.sorted = "TOP"; // No way to select sorting on mobile website (only on app)
+			}
+		}else {
+			comments.deactivated = true;
 		}
 	} catch (e) { ct_mediaError(new ParseError(130, "Failed to extract video comment data: '" + e.message + "'!", true)); }
 	
