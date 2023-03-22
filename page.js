@@ -2219,6 +2219,23 @@ function yt_extractChannelPageTabs (initialData) {
 			tab.continuation = yt_parseContinuationItem(c.richGridRenderer.contents);
 			tab.videos = yt_parseChannelVideos(c.richGridRenderer.contents);
 			if (!tab.continuation) tab.loadReady = true;
+			/* if (c.richGridRenderer.header)
+			{
+				var popularTab = c.richGridRenderer.header.feedFilterChipBarRenderer?.contents.extract(r => r.chipCloudChipRenderer.text.simpleText.toLowerCase() == "popular"? r.chipCloudChipRenderer : undefined);
+				if (popularTab)
+				{ // Add secondary tab with different ordering
+					var popTab = {};
+					popTab.title = "Popular";
+					popTab.browseContent = {
+						startURL: popularTab.navigationEndpoint.commandMetadata.webCommandMetadata.apiUrl,
+						itctToken: popularTab.navigationEndpoint.clickTrackingParams,
+					};
+					tab.videos = [];
+					popTab.id = "popular";
+					tabs.push(popTab);
+				}
+			} */
+			
 		}
 		else if (c.sectionListRenderer) { // Usually base container with multiple itemSectionRenderers
 			var listContent;
@@ -2255,9 +2272,10 @@ function yt_extractChannelPageTabs (initialData) {
 				listID: play.watchEndpoint.playlistId,
 				itctToken: play.clickTrackingParams,
 			};
-			if (s.endpoint.commandMetadata.webCommandMetadata.url.includes("shelf_id")) { // Usually when content is gridRenderer
+			var browseUrl = (s.endpoint.commandMetadata.webCommandMetadata.url || s.endpoint.commandMetadata.webCommandMetadata.apiUrl);
+			if (browseUrl.includes("shelf_id")) { // Usually when content is gridRenderer
 				tab.browseContent = { // May imply that associated list does not contain all videos - only separate shelf browse page does
-					startURL: s.endpoint.commandMetadata.webCommandMetadata.url,
+					startURL: browseUrl,
 					itctToken: s.endpoint.clickTrackingParams,
 				};
 			}
