@@ -230,8 +230,11 @@ const VIRT_CACHE = "https://flagplayer.seneral.dev/caches/vd-"; // Virtual adres
 const HOST_YT = "https://www.youtube.com";
 const HOST_YT_MOBILE = "https://m.youtube.com";
 const HOST_YT_IMG = "https://i.ytimg.com/vi/"; // https://i.ytimg.com/vi/ or https://img.youtube.com/vi/
-const HOST_CORS = "https://flagplayer-cors.herokuapp.com/"; // Default value only
+const HOST_CORS = "https://flagplayer-cors.seneral.dev/"; // Default value only
+const OLD_CORS_HOST = "https://flagplayer-cors.herokuapp.com/";
 //"http://localhost:8080/";
+// Some public hosts (Some might be down), DO NOT SUPPORT COMMENTS due to custom headers to forward
+//"https://proxy.cors.sh/"
 //"https://cors-anywhere.herokuapp.com/"; 
 //"http://allow-any-origin.appspot.com/";
 //"https://secret-ocean-49799.herokuapp.com/";
@@ -300,6 +303,20 @@ function sw_install () {
 /* ---- INIT ----------	*/
 /* -------------------- */
 
+Object.defineProperties(Array.prototype, {
+	extract: {
+		value: function (fn) {
+			for (let x of this) {
+				var res = fn(x);
+				if (res != undefined)
+					return res;
+			}
+		},
+		enumerable: false
+	},
+
+});
+
 function ct_init () {
 	ct_loadPreferences();
 	ui_updatePageLayout();
@@ -332,6 +349,17 @@ function ct_loadPreferences () {
 	ct_pref.autoplay = G("prefAutoplay") == "false"? false : true;
 	ct_pref.theme = G("prefTheme") || "DARK";
 	ct_pref.corsAPIHost = G("prefCorsAPIHost") || HOST_CORS;
+	if (ct_pref.corsAPIHost == OLD_CORS_HOST)
+		ct_pref.corsAPIHost = HOST_CORS;
+	else if (!ct_pref.corsAPIHost.includes("localhost") && ct_pref.corsAPIHost != HOST_CORS)
+	{ // Might have switched to a public host, notify users that new official servers are available
+		var not = ui_setNotification("newCORSServer", 'An official CORS backend is available again! <button>Use official backend</button> <br/> Public CORS hosts do not support custom headers required for comment loading and are a shared resource.');
+		not.children[0].onclick = function() {
+			ct_pref.corsAPIHost = HOST_CORS;
+			ct_savePreferences();
+			not.notClose();
+		};
+	}
 	ct_pref.relatedVideos = G("prefRelated") || "ALL";
 	ct_pref.filterCategories = (G("prefFilterCategories") || "").split(",").map(c => parseInt(c));
 	ct_pref.filterHideCompletely = G("prefFilterHideCompletely") == "false"? false : true;
@@ -423,6 +451,7 @@ function ct_loadContent () {
 		ct_page = Page.Home;
 		ct_loadHome();
 	}
+	ui_setupHome();
 	// Secondary Content (can be primary)
 	if (yt_playlistID) {
 		ct_pagePlaylist = true;
@@ -735,7 +764,7 @@ function ct_navSearch(searchTerms, inNewState) {
 	var chMatch = searchTerms.match(/(UC[a-zA-Z0-9_-]{22})/);
 	var cMatch = searchTerms.match(/c\/([a-zA-Z0-9_-]+)/);
 	var uMatch = searchTerms.match(/user\/([a-zA-Z0-9_-]+)/);
-	var vdMatch = searchTerms.match(/v=([a-zA-Z0-9_-]{11})/) || searchTerms.match(/youtu.be\/([a-zA-Z0-9_-]{11})/) || searchTerms.match(/^([a-zA-Z0-9_-]{11})$/);
+	var vdMatch = searchTerms.match(/v=([a-zA-Z0-9_-]{11})/) || searchTerms.match(/youtu.be\/([a-zA-Z0-9_-]{11})/);
 	if (plMatch) ct_loadPlaylist(plMatch[1]);
 	if (!plMatch || vdMatch) {
 		ct_beforeNav();
@@ -1007,6 +1036,11 @@ function ct_mediaError (error) {
 	console.error(error.name + (error.code? " " + error.code : "") + ": " + error.status + (error.tagname? " in " + error.tagname : "") + "  ", error.stack);
 }
 function ct_mediaEnded () {
+	if (md_curTime < md_totalTime-2) {
+		console.warning("Media End Signal even when media is at " + md_curTime + "s our of " + md_totalTime + "s!")
+		// Happens often on Firefox, ends video playback prematurely
+		return;
+	}
 	md_pause ();
 	if (ct_temp.loop) {
 		md_updateTime(0);
@@ -2411,8 +2445,7 @@ function yt_extractVideoMetadata(page, video) {
 			meta.views = meta.views || yt_parseNum(primary.viewCount.videoViewCountRenderer.viewCount.simpleText);
 			// Ratings
 			if (meta.allowRatings) {
-				sentimentButtons = primary.videoActions.menuRenderer.topLevelButtons.filter(c => c.toggleButtonRenderer);
-				likeButton = sentimentButtons.find(c => c.toggleButtonRenderer.targetId == "watch-like").toggleButtonRenderer;
+				var likeButton = primary.videoActions.menuRenderer.topLevelButtons.extract(c => c.segmentedLikeDislikeButtonRenderer?.likeButton?.toggleButtonRenderer || (c.toggleButtonRenderer?.targetId == "watch-like"? c.toggleButtonRenderer : undefined));
 				meta.likes = yt_parseNum(likeButton.defaultText.accessibility.accessibilityData.label);
 				meta.dislikes = undefined;
 			}
@@ -2993,10 +3026,13 @@ function ui_updatePageLayout (forceRebuild = false) {
 		ht_main.appendChild(sec_channel);
 		ht_side.appendChild(sec_playlist);
 		ht_side.appendChild(sec_related);
-		document.body.classList.add("desktop");
-		document.body.classList.remove("mobile");
 		// Uncollapse playlist on desktop by default
 		sec_playlist.removeAttribute("collapsed");
+		// Update fixed volume toggle for mobile
+		ui_updateSoundState();
+		// Switch automatic styling
+		document.body.classList.add("desktop");
+		document.body.classList.remove("mobile");
 	}
 	if (!ct_isDesktop && (setDesktop || forceRebuild)) {
 		ht_container.insertBefore(sec_player, ht_container.firstChild);
@@ -3008,6 +3044,11 @@ function ui_updatePageLayout (forceRebuild = false) {
 		ht_mobile.appendChild(sec_comments);
 		ht_mobile.appendChild(sec_search);
 		ht_mobile.appendChild(sec_channel);
+		// Collapse playlist on desktop by default
+		sec_playlist.setAttribute("collapsed", "");
+		// Update fixed volume toggle for mobile
+		ui_updateSoundState();
+		// Switch automatic styling
 		document.body.classList.add("mobile");
 		document.body.classList.remove("desktop");
 	}
@@ -3035,6 +3076,7 @@ function ui_updatePageState () {
 }
 function ui_updateSoundState () { 
 	I("muteButton").setAttribute("state", md_pref.muted? "on" : "off");
+	I("volumeSlider").parentElement.style.width = ct_isDesktop? "" : 0;
 	I("volumeBar").style.width = (md_pref.muted? 0 : md_pref.volume*100) + "%";
 	I("volumePosition").style.left = (md_pref.muted? 0 : md_pref.volume*100) + "%";
 }
@@ -4339,6 +4381,8 @@ function onControlPrev () {
 }
 function onControlMute () {
 	md_pref.muted = !md_pref.muted;
+	/* if (!ct_isDesktop) // Can't be edited on mobile
+		md_pref.volume = 1.0; // Need to reset it somewhere */
 	md_updateVolume();
 	ct_savePreferences();
 }
