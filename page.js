@@ -231,7 +231,6 @@ const HOST_YT = "https://www.youtube.com";
 const HOST_YT_MOBILE = "https://m.youtube.com";
 const HOST_YT_IMG = "https://i.ytimg.com/vi/"; // https://i.ytimg.com/vi/ or https://img.youtube.com/vi/
 const HOST_CORS = "https://flagplayer-cors.seneral.dev/"; // Default value only
-const OLD_CORS_HOST = "https://flagplayer-cors.herokuapp.com/";
 //"http://localhost:8080/";
 // Some public hosts (Some might be down), DO NOT SUPPORT COMMENTS due to custom headers to forward
 //"https://proxy.cors.sh/"
@@ -349,8 +348,8 @@ function ct_loadPreferences () {
 	ct_pref.autoplay = G("prefAutoplay") == "false"? false : true;
 	ct_pref.theme = G("prefTheme") || "DARK";
 	ct_pref.corsAPIHost = G("prefCorsAPIHost") || HOST_CORS;
-	if (ct_pref.corsAPIHost == OLD_CORS_HOST)
-		ct_pref.corsAPIHost = HOST_CORS;
+	if (ct_pref.corsAPIHost.includes("flagplayer-cors.herokuapp.com"))
+		ct_pref.corsAPIHost = HOST_CORS; // Was old host, not available anymore
 	else if (!ct_pref.corsAPIHost.includes("localhost") && ct_pref.corsAPIHost != HOST_CORS)
 	{ // Might have switched to a public host, notify users that new official servers are available
 		var not = ui_setNotification("newCORSServer", 'An official CORS backend is available again! <button>Use official backend</button> <br/> Public CORS hosts do not support custom headers required for comment loading and are a shared resource.');
@@ -360,6 +359,8 @@ function ct_loadPreferences () {
 			not.notClose();
 		};
 	}
+	if (!ct_pref.corsAPIHost.endsWith('/'))
+		ct_pref.corsAPIHost += '/';
 	ct_pref.relatedVideos = G("prefRelated") || "ALL";
 	ct_pref.filterCategories = (G("prefFilterCategories") || "").split(",").map(c => parseInt(c));
 	ct_pref.filterHideCompletely = G("prefFilterHideCompletely") == "false"? false : true;
@@ -2213,7 +2214,13 @@ function yt_extractChannelPageTabs (initialData) {
 	
 	var tabs = [];
 	var handleContainer = function (tab, c) {
-		if (c.sectionListRenderer) { // Usually base container with multiple itemSectionRenderers
+		if (c.richGridRenderer) {
+			tab.title = "Uploads";
+			tab.continuation = yt_parseContinuationItem(c.richGridRenderer.contents);
+			tab.videos = yt_parseChannelVideos(c.richGridRenderer.contents);
+			if (!tab.continuation) tab.loadReady = true;
+		}
+		else if (c.sectionListRenderer) { // Usually base container with multiple itemSectionRenderers
 			var listContent;
 			if (c.sectionListRenderer.subMenu) {
 				var sub = c.sectionListRenderer.subMenu.channelSubMenuRenderer;
@@ -2275,12 +2282,12 @@ function yt_extractChannelPageTabs (initialData) {
 	return tabs;
 }
 function yt_parseChannelVideos (itemList) {
-	return itemList.filter(v => v.gridVideoRenderer || v.compactVideoRenderer).map(function (v) {
-		v = v.gridVideoRenderer || v.compactVideoRenderer;
+	return itemList.filter(v => v.gridVideoRenderer || v.richItemRenderer || v.compactVideoRenderer).map(function (v) {
+		v = v.gridVideoRenderer || v.compactVideoRenderer || v.richItemRenderer?.content.videoRenderer;
 		return { 
 			title: yt_parseLabel(v.title),
 			videoID: v.videoId,
-			views: yt_parseNum(yt_parseLabel(v.viewCountText)),
+			views: yt_parseNum(yt_parseLabel(v.viewCountText || v.shortViewCountText)),
 			length: v.thumbnailOverlays.reduce((t, v) => v.thumbnailOverlayTimeStatusRenderer? yt_parseTime(yt_parseLabel(v.thumbnailOverlayTimeStatusRenderer.text)) : t, 0),
 			thumbnailURL: yt_selectThumbnail(v.thumbnail.thumbnails),
 			uploadedTimeAgoText: yt_parseLabel(v.publishedTimeText),
@@ -4304,7 +4311,10 @@ function onSettingsChange (hint) {
 	switch (hint) {
 		case "CH":
 			ct_pref.corsAPIHost = I("st_corsHost").value;
-			if (!ct_pref.corsAPIHost.endsWith("/")) ct_pref.corsAPIHost += "/";
+			if (!ct_pref.corsAPIHost.endsWith('/')) {
+				ct_pref.corsAPIHost += '/';
+				I("st_corsHost").value += '/';
+			}
 			break;
 		case "FV":
 			ct_pref.filterHideCompletely = I("st_filter_hide").checked;
