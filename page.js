@@ -1686,7 +1686,7 @@ function yt_browse (subPath) {
 			if (ct_isAdvancedCorsHost)
 				yt_extractCookies(page, response.headers.get("x-set-cookies"));
 			
-			console.log("YT Page: ", page);
+			console.log("YT Page from URL " + subPath + ": ", page);
 			return page;
 		});
 	}).catch(function(error) {
