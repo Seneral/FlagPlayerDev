@@ -996,10 +996,14 @@ function ct_mediaLoaded () {
 }
 function ct_mediaReady () {
 	md_flags.buffering = false;
-	if (md_paused && md_state == State.Loading) // Means media is ready, but playback was denied
+	if (md_paused && md_state == State.Loading) {
+		// Means media is ready, but playback was denied
+		navigator.mediaSession?.playbackState = "paused";
 		md_state = State.PreStart;
-	else // Playback start was successful
+	} else { // Playback start was successful
 		md_state = State.Started;
+		navigator.mediaSession?.playbackState = md_paused? "paused" : "playing";
+	}
 	ui_updatePlayerState();
 }
 function ct_mediaError (error) {
@@ -1076,6 +1080,8 @@ function ct_mediaUnload () {
 	md_curTime = 0;
 	md_totalTime = 0;
 
+	navigator.mediaSession?.playbackState = "none";
+
 	md_resetStreams();
 	ui_updateTimelineProgress();
 	ui_updateTimelineBuffered();
@@ -1101,8 +1107,10 @@ function ct_mediaPlayPause (value, indirect) {
 		console.log("Set md_paused state to " + md_paused + " (intended: " + value + ")");
 		if (!md_sources) {
 			md_state = State.Loading;
+			navigator.mediaSession?.playbackState = "none";
 		} else if (md_paused) {
 			md_pause(true);
+			navigator.mediaSession?.playbackState = "paused";
 			if (indirect) ui_indicatePause();
 		} else {
 			if (md_state == State.Ended) md_curTime = 0;
@@ -1112,6 +1120,8 @@ function ct_mediaPlayPause (value, indirect) {
 				ct_stopAutoplay();
 				return;
 			}
+			navigator.mediaSession?.playbackState = "playing"; // Not yet playing
+			// After attempt completes, ct_mediaReady will set to actual state
 			if (indirect) ui_indicatePlay();
 		}
 	}
