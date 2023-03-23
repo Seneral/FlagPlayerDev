@@ -4280,12 +4280,12 @@ function ui_setupEventHandlers () {
 		navigator.mediaSession.setActionHandler('play', function() {
 			console.log("Playing due to mediasession!");
 			ct_mediaPlayPause(false, true);
-			console.log("Now in state " + md_state + " and paused: " + md_Paused);
+			console.log("Now in state " + md_state + " and paused: " + md_paused);
 		});
 		navigator.mediaSession.setActionHandler('pause', function() {
 			console.log("Pausing due to mediasession!");
 			ct_mediaPlayPause(true, true);
-			console.log("Now in state " + md_state + " and paused: " + md_Paused);
+			console.log("Now in state " + md_state + " and paused: " + md_paused);
 		});
 		navigator.mediaSession.setActionHandler('previoustrack', function() {
 			history.back();
