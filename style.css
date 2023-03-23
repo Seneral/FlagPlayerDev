@@ -160,9 +160,6 @@ a, a:visited, a:hover, a:active {
 	display: none; /* All enabled by script */
 	position: relative;
 }
-.section.default-show {
-	display: block;
-}
 
 
 /* --------------------------- */

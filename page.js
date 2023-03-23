@@ -970,6 +970,7 @@ function ct_loadMedia () {
 function ct_mediaLoad () {
 	md_state = State.Loading;
 	md_paused = !ct_pref.autoplay;
+	console.log("Initialised md_paused to " + md_paused + " after ct_mediaLoad");
 	md_flags.buffering = false;
 	md_flags.seeking = false;
 	ui_setPoster();
@@ -1091,8 +1092,9 @@ function ct_mediaUnload () {
 function ct_mediaPlayPause (value, indirect) {
 	ct_stopAutoplay();
 	if (md_state != State.None && (md_state != State.Error || md_sources))	{
-		if (md_state == State.Ended || md_state == State.Error) md_paused = false;
+		if (!indirect && (md_state == State.Ended || md_state == State.Error)) md_paused = false;
 		else md_paused = value;
+		console.log("Set md_paused state to " + md_paused + " (intended: " + value + ")");
 		if (!md_sources) {
 			md_state = State.Loading;
 		} else if (md_paused) {
@@ -4276,10 +4278,14 @@ function ui_setupEventHandlers () {
 	// Media Controls
 	if (navigator.mediaSession) {
 		navigator.mediaSession.setActionHandler('play', function() {
+			console.log("Playing due to mediasession!");
 			ct_mediaPlayPause(false, true);
+			console.log("Now in state " + md_state + " and paused: " + md_Paused);
 		});
 		navigator.mediaSession.setActionHandler('pause', function() {
+			console.log("Pausing due to mediasession!");
 			ct_mediaPlayPause(true, true);
+			console.log("Now in state " + md_state + " and paused: " + md_Paused);
 		});
 		navigator.mediaSession.setActionHandler('previoustrack', function() {
 			history.back();
@@ -4409,6 +4415,7 @@ function onSearchUpdate () {
 	ct_savePreferences();
 }
 function onControlPlay () {
+	console.log("onControlPlay");
 	ct_mediaPlayPause(!md_paused, false);
 }
 function onControlNext () {
@@ -4513,7 +4520,10 @@ function onMouseClick (mouse) {
 		// Don't register touch when control bar isn't shown (it will be shown afterwards, though)
 		var isTouch = mouse.sourceCapabilities && mouse.sourceCapabilities.firesTouchEvents;
 		if (!overridePlayer && (ct_temp.showControlBar || !isTouch))  
+		{
+			console.log("controlOverlay click");
 			ct_mediaPlayPause(!md_paused, true);
+		}
 		mouse.preventDefault();
 	}
 
@@ -4622,6 +4632,7 @@ function onKeyDown (keyEvent) {
 	} else {
 		switch (keyEvent.key) {
 		case " ": case "k":
+			console.log("Space / k pause toggle");
 			ct_mediaPlayPause(!md_paused, true);
 			break;
 		case "Left": case "ArrowLeft": case "j": 
