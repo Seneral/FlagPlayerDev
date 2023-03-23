@@ -1686,7 +1686,7 @@ function yt_browse (subPath) {
 			if (ct_isAdvancedCorsHost)
 				yt_extractCookies(page, response.headers.get("x-set-cookies"));
 			
-			console.log("YT Page from URL " + subPath + ": ", page);
+			console.log("YT " + (page.isDesktop? "desktop" : "mobile") + " page from URL " + subPath + ": ", page);
 			return page;
 		});
 	}).catch(function(error) {
@@ -1841,8 +1841,7 @@ function yt_parseDateText (dateText) {
 	if (euMatch) return new Date(parseInt(euMatch[3]), parseInt(euMatch[2])-1, parseInt(euMatch[1]));
 }
 function yt_parseLabel (label) {
-	label = label || {};
-	return (label.runs? label.runs.reduce((t, r) => t += r.text, "") : label.simpleText) || "";
+	return label?.accessibility?.accessibilityData.label || label?.runs?.reduce((t, r) => t += r.text, "") || label?.simpleText || "";
 }
 function yt_parseText (text) {
 	return (text || "").replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -1872,7 +1871,7 @@ function yt_parseFormattedRuns(runs) {
 	return text;
 }
 function yt_generateContinuationLoader(handleItems, api) {
-	return function (data) {
+	var paged_req = function (data) {
 		return PAGED_REQUEST(data.continuation, api || "browse")
 		.then(function(pagedData) {
 			data.lastPage = pagedData;
@@ -1882,8 +1881,15 @@ function yt_generateContinuationLoader(handleItems, api) {
 				contents = pagedData.continuationContents.playlistVideoListContinuation;
 				items = contents.contents;
 			} else { // Desktop
-				contents = (pagedData.onResponseReceivedActions || pagedData.onResponseReceivedEndpoints || pagedData.onResponseReceivedCommands)[0]?.appendContinuationItemsAction;
-				items = contents.continuationItems;
+				contents = pagedData.onResponseReceivedActions || pagedData.onResponseReceivedEndpoints || pagedData.onResponseReceivedCommands;
+				if (contents)
+					contents = contents[0]?.appendContinuationItemsAction;
+				if (!contents)
+				{ // This does seem to work
+					data.continuation.itctToken = pagedData.trackingParams;
+					return paged_req(data);
+				}
+				items = contents?.continuationItems;
 			}
 			// Extract item list in case they are nested
 			var itemList = items;
@@ -1896,6 +1902,7 @@ function yt_generateContinuationLoader(handleItems, api) {
 			return data.continuation != undefined;
 		});
 	};
+	return paged_req;
 }
 function yt_parseContinuationItem(itemList) {
 	c = itemList.find(v => v.continuationItemRenderer);
@@ -2301,7 +2308,8 @@ function yt_extractChannelPageTabs (initialData) {
 }
 function yt_parseChannelVideos (itemList) {
 	return itemList.filter(v => v.gridVideoRenderer || v.richItemRenderer || v.compactVideoRenderer).map(function (v) {
-		v = v.gridVideoRenderer || v.compactVideoRenderer || v.richItemRenderer?.content.videoRenderer;
+		v = v.richItemRenderer?.content || v;
+		v = v.videoRenderer || v.gridVideoRenderer || v.compactVideoRenderer;
 		return { 
 			title: yt_parseLabel(v.title),
 			videoID: v.videoId,
@@ -2471,7 +2479,7 @@ function yt_extractVideoMetadata(page, video) {
 			// Ratings
 			if (meta.allowRatings) {
 				var likeButton = primary.videoActions.menuRenderer.topLevelButtons.extract(c => c.segmentedLikeDislikeButtonRenderer?.likeButton?.toggleButtonRenderer || (c.toggleButtonRenderer?.targetId == "watch-like"? c.toggleButtonRenderer : undefined));
-				meta.likes = yt_parseNum(likeButton.defaultText.accessibility.accessibilityData.label);
+				meta.likes = yt_parseNum(yt_parseLabel(likeButton.defaultText));
 				meta.dislikes = undefined;
 			}
 			// Subscribers
@@ -2501,9 +2509,8 @@ function yt_extractVideoMetadata(page, video) {
 			meta.views = yt_parseNum(yt_parseLabel(mainContainer.expandedSubtitle));
 			// Ratings
 			if (meta.allowRatings) {
-				var actionContainer = videoData.contents.find(c => c.slimVideoActionBarRenderer).slimVideoActionBarRenderer;
-				var likeButton = actionContainer.buttons.find(b => b.slimMetadataToggleButtonRenderer && b.slimMetadataToggleButtonRenderer.isLike).slimMetadataToggleButtonRenderer.button.toggleButtonRenderer;	
-				meta.likes = yt_parseNum(likeButton.defaultText.accessibility.accessibilityData.label);;
+				var likeButton = videoData.contents.extract(c => c.slimVideoActionBarRenderer)?.buttons.extract(b => b.slimMetadataButtonRenderer?.button.segmentedLikeDislikeButtonRenderer).likeButton?.toggleButtonRenderer;	
+				meta.likes = yt_parseNum(yt_parseLabel(likeButton?.defaultText));
 				meta.dislikes = undefined;
 			}
 			// Subscribers
@@ -2743,11 +2750,13 @@ function yt_extractVideoCommentObject (commentData, comments, response) {
 	if (header && header.length > 0) {
 		try { // Extract comment header
 			header = header[0].commentsHeaderRenderer;
-			commentData.count = header.countText? yt_parseNum(yt_parseLabel(header.countText)) : (header.commentsCount? yt_parseNum(yt_parseLabel(header.commentsCount)) : (commentData.count || 0));
-			var sortList = header.sortMenu.sortFilterSubMenuRenderer.subMenuItems;
-			commentData.conTokenTop = sortList[0].serviceEndpoint.continuationCommand.token;
-			commentData.conTokenNew = sortList[1].serviceEndpoint.continuationCommand.token;
-			commentData.sorted = sortList[0].selected? "TOP" : "NEW";
+			commentData.count = yt_parseNum(yt_parseLabel(header.countText || header.commentsCount)) || commentData.count || 0;
+			var sortList = header.sortMenu?.sortFilterSubMenuRenderer.subMenuItems;
+			if (sortList) {
+				commentData.conTokenTop = sortList[0].serviceEndpoint.continuationCommand.token;
+				commentData.conTokenNew = sortList[1].serviceEndpoint.continuationCommand.token;
+				commentData.sorted = sortList[0].selected? "TOP" : "NEW";
+			}
 		} catch (e) { ct_mediaError(new ParseError(132, "Failed to extract comment header: '" + e.message + "'!", true)); }
 	} // Only in first main request, never reply requests
 
@@ -3690,6 +3699,7 @@ function ui_fillChannelTab (tab) {
 	if (tab.loadReady)
 		ui_addChannelUploads(tab.container, tab.videos, 0);
 	// Setup Loader
+	// TODO: This rarely loads the first set of videos that was already parsed again
 	var loader = yt_generateContinuationLoader(function (tab, itemList) {
 		newVideos = yt_parseChannelVideos(itemList);
 		tab.videos = tab.videos.concat(newVideos);
@@ -3827,13 +3837,13 @@ function ui_setNotification(id, text, timeout = undefined) {
 		not.notContent = not.children[0];
 		not.notOnClose = undefined;
 		not.notClose = function() { 
+			clearTimeout(not.timeout);
 			if (not.notOnClose) not.notOnClose();
-			if (not.timeout) clearTimeout(not.timeout);
-			I("notificationContainer").removeChild(not);
+			not.parentNode?.removeChild(not);
 		};
 		not.children[2].onclick = not.notClose;
 	}
-	if (not.timeout) clearTimeout(not.timeout);
+	clearTimeout(not.timeout);
 	if (timeout != undefined) {
 		not.timout = setTimeout(function() {
 			not.timeout = undefined;
