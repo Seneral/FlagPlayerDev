@@ -634,6 +634,10 @@ function ct_triggerPagedContent(pagedContent) {
 /* ---- HOME ----------	*/
 /* -------------------- */
 
+function ct_navHome() {
+	ct_beforeNav();
+	ct_performNav();
+}
 function ct_loadHome () {
 	ui_setupHome();
 }
@@ -4276,7 +4280,9 @@ function ui_setupEventHandlers () {
 	onToggleButton(I("search_hideCompletely"), onSearchUpdate);
 
 	// Media Controls
+	console.log("Have chance to register mediaSession callbacks!");
 	if (navigator.mediaSession) {
+		console.log("Registering mediaSession callbacks!");
 		navigator.mediaSession.setActionHandler('play', function() {
 			console.log("Playing due to mediasession!");
 			ct_mediaPlayPause(false, true);
@@ -4286,6 +4292,10 @@ function ui_setupEventHandlers () {
 			console.log("Pausing due to mediasession!");
 			ct_mediaPlayPause(true, true);
 			console.log("Now in state " + md_state + " and paused: " + md_paused);
+		});
+		navigator.mediaSession.setActionHandler('stop', function() {
+			console.log("Stopping due to mediasession!");
+			ct_navHome();
 		});
 		navigator.mediaSession.setActionHandler('previoustrack', function() {
 			history.back();
