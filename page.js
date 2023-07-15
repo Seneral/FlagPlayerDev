@@ -1599,6 +1599,10 @@ function db_cacheStream (video, progress) {
 					"content-type": response.headers.get("content-type"),
 				},
 			}));
+		})
+		.catch(error => {
+			console.error("Failed due to fetch: " + error);
+			throw error;
 		});
 
 		var progressWatch = new Promise(async function(resolve, reject) {
@@ -1612,6 +1616,10 @@ function db_cacheStream (video, progress) {
 					return reject({});
 				}
 			}
+		})
+		.catch(error => {
+			console.error("Failed due to progress: " + error);
+			throw error;
 		});
 
 		return Promise.all([cacheWrite, progressWatch])
