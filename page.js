@@ -4657,7 +4657,7 @@ function onMouseClick (mouse) {
 	if (target = ui_hasCascadedClass(mouse.target, "contentLoader", 2)) {
 		var container = target.parentElement.className.includes("contentContainer")? target.parentElement 
 				: target.parentElement.getElementsByClassName("contentContainer")[0];
-		new function("container", target.getAttribute("load-content"))(container);
+		new Function("container", target.getAttribute("load-content"))(container);
 		container.setAttribute("loaded", "");
 		if (target.className.includes("collapser")) // Only act as collapser from now on
 			target.classList.remove("contentLoader");
