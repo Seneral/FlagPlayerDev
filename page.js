@@ -1626,6 +1626,7 @@ function db_cacheStream (video, progress) {
 		.then(() => true)
 		.catch(function(err) {
 			console.error(err);
+			return false;
 		})
 		.then(function(success) {
 			db_access().then(function() {
