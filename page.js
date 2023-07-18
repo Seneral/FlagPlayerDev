@@ -1676,7 +1676,6 @@ function db_cacheStream (video, type, progress) {
 						cachedVideo.cache = cacheObj;
 						var setVidReq = dbVideos.put(cachedVideo);
 						setVidReq.onsuccess = function() {
-							console.log(status);
 							if (status == "cache") {
 								cacheObj.message = "Partially cached - Cache or network error";
 								reject(cacheObj);

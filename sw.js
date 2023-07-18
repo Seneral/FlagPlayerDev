@@ -116,7 +116,10 @@ self.addEventListener('fetch', function(event) {
 						event.waitUntil(caches.open(APP_CACHE).then(cache => cache.put(event.request, cacheResponse)));
 					}
 					return response;
-				}).catch(function(error) {});
+				}).catch(function(error) {
+					console.error(error);
+					throw error;
+				});
 			})
 		);
 	}
