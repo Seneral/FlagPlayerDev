@@ -1576,16 +1576,8 @@ function db_cacheStream (video, type, progress) {
 	};
 	var controller = new AbortController();
 
-	var request = new Request(stream.url, { headers: { "range": "bytes=0-" }, signal: controller.signal });
-	if (type == "opaque") // Either fetch opaque (no idea about true size, download progress, etc)
-	{
-		console.log("Choosing opaque caching!");
-		request.mode = "no-cors";
-	}
-	else {
-		request.url = ct_pref.corsAPIHost + request.url;
-		console.log("Choosing normal caching!");
-	} // Or fetch over own server, adding to server load
+	var request = new Request(type == "opaque"? stream.url : ct_pref.corsAPIHost + request.url, 
+		{ headers: { "range": "bytes=0-" }, mode: type == "opaque"? "no-cors" : "cors", signal: controller.signal });
 	return fetch(request)
 	.then(function(response) {
 		if (response.type == "opaque") {
