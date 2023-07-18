@@ -700,7 +700,7 @@ function ct_cacheVideo(video) {
 	var videoID = video.videoID;
 	var notID = 'cache-' + videoID;
 	var abort = false;
-	var type = "opaque"; // "normal" - normal is better but uses more cors server resources as all cached audio is directed over it
+	var type = "normal"; // "normal" - normal is better but uses more cors server resources as all cached audio is directed over it
 	ui_setNotification(notID, "Caching " + videoID + "...").notOnClose = function() { abort = true; };
 	db_cacheStream(video, type, function(bytesReceived, bytesTotal) {
 		// Not called if type == opaque
