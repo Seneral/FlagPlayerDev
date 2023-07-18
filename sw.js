@@ -124,15 +124,20 @@ self.addEventListener('fetch', function(event) {
 				// Fetch from net
 				return fetch(event.request)
 				.then(function(response) {
-					if (!response || (response.status !== 200 && response.status !== 0) || response.type == 'error')
+					if (!response || (response.status !== 200 && response.status !== 0) || response.type == 'error') {
+						console.log("Fetching request " + event.request + " resulted in erroneous response " + response + "!");
 						return response;
+					}
 					// Cache if desired
 					if (url.startsWith(BASE + "/favicon")) {
 						var cacheResponse = response.clone();
 						event.waitUntil(caches.open(APP_CACHE).then(cache => cache.put(event.request, cacheResponse)));
 					}
+					console.log("Fetching request " + event.request + " resulted in response " + response + "!");
 					return response;
-				}).catch(function(error) {});
+				}).catch(function(error) {
+					console.log("Fetching request " + event.request + " returned error " + error + "!");
+				});
 			})
 		);
 	}
