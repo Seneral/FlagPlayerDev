@@ -700,12 +700,16 @@ function ct_cacheVideo(video) {
 	var videoID = video.videoID;
 	var notID = 'cache-' + videoID;
 	var abort = false;
+	var interrupted = false;
 	var type = "normal"; // "normal" - normal is better but uses more cors server resources as all cached audio is directed over it
 	ui_setNotification(notID, "Caching " + videoID + "...").notOnClose = function() { abort = true; };
 	db_cacheStream(video, type, function(bytesReceived, bytesTotal) {
 		// Not called if type == opaque
+		if (interrupted) return 0;
 		if (abort) return false;
-		ui_setNotification(notID, "Caching " + videoID + ": " + ui_shortenBytes(bytesReceived) + "/" + ui_shortenBytes(bytesTotal));
+		var not = ui_setNotification(notID, "Caching " + videoID + ": " + ui_shortenBytes(bytesReceived) + "/" + ui_shortenBytes(bytesTotal) +
+		'<button id="pauseCachingButton">Interrupt Caching</button>');
+		not.notContent.children[0].onclick = function() { not.notOnClose = false; not.notClose(); interrupted = true; };
 		return true;
 	}).then(function(cache) { 
 		var not = ui_setNotification(notID, "Caching " + videoID + ": " + (cache.size? ui_shortenBytes(cache.size) : "Done, unknown size") + " - " +
@@ -1644,6 +1648,7 @@ function db_cacheStream (video, type, progress) {
 			}));
 		})
 		.catch(() => {
+			controller.abort();
 			throw "cache";
 		});
 
@@ -1653,9 +1658,16 @@ function db_cacheStream (video, type, progress) {
 				const result = await reader.read();
 				if (result.done) return resolve("success");
 				cacheObj.progress += result.value.length;
-				if (progress && !progress(cacheObj.progress, cacheObj.size)) {
-					controller.abort();
-					return reject("aborted");
+				if (progress) {
+					var status = progress(cacheObj.progress, cacheObj.size);
+					if (status === false) {
+						controller.abort();
+						return reject("aborted");
+					}
+					if (status === -1) {
+						controller.abort();
+						return reject("cache");
+					}
 				}
 			}
 		});
