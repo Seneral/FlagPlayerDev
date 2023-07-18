@@ -1579,6 +1579,7 @@ function db_cacheStream (video, progress) {
 		if (!response.ok)
 			return Promise.reject(new NetworkError(response));
 
+		
 		cacheObj.size = parseInt(response.headers.get("content-length"));
 		cacheObj.progress = 0;
 		if (progress && !progress(cacheObj.progress, cacheObj.size)) {
