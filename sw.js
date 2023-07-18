@@ -95,21 +95,6 @@ self.addEventListener('fetch', function(event) {
 			.then(function(cache) {
 				return cache.match(url);
 			})
-			/*.then(function(response) {
-				return response.arrayBuffer()
-				.then(function(byteData) {
-					return new Response(byteData.slice(pos), {
-						status: 206,
-						statusText: 'Partial Content',
-						headers: [
-							['Content-Type', response.headers.get("content-type") ],
-							['Content-Range', 'bytes ' + pos + '-' +
-								(byteData.byteLength - 1) + '/' + byteData.byteLength
-							]
-						]
-					});
-				})
-			})*/
 		);
 	}
 	else {
@@ -121,20 +106,15 @@ self.addEventListener('fetch', function(event) {
 				// Fetch from net
 				return fetch(event.request)
 				.then(function(response) {
-					if (!response || (response.status !== 200 && response.status !== 0) || response.type == 'error') {
-						console.log("Fetching request ", event.request, " resulted in erroneous response ", response, "!");
+					if (!response || (response.status !== 200 && response.status !== 0) || response.type == 'error')
 						return response;
-					}
 					// Cache if desired
 					if (url.startsWith(BASE + "/favicon")) {
 						var cacheResponse = response.clone();
 						event.waitUntil(caches.open(APP_CACHE).then(cache => cache.put(event.request, cacheResponse)));
 					}
-					console.log("Fetching request ", event.request, " resulted in response ", response, "!");
 					return response;
-				}).catch(function(error) {
-					console.log("Fetching request ", event.request, " returned error ", error, "!");
-				});
+				}).catch(function(error) {});
 			})
 		);
 	}

@@ -700,20 +700,22 @@ function ct_cacheVideo(video) {
 	var videoID = video.videoID;
 	var notID = 'cache-' + videoID;
 	var abort = false;
+	var type = "opaque"; // "normal" - normal is better but uses more cors server resources as all cached audio is directed over it
 	ui_setNotification(notID, "Caching " + videoID + "...").notOnClose = function() { abort = true; };
-	db_cacheStream(video, function(bytesReceived, bytesTotal) {
+	db_cacheStream(video, type, function(bytesReceived, bytesTotal) {
+		// Not called if type == opaque
 		if (abort) return false;
-		ui_setNotification(notID, 'Caching ' + videoID + ': ' + ui_shortenBytes(bytesReceived) + '/' + ui_shortenBytes(bytesTotal) + '');
+		ui_setNotification(notID, "Caching " + videoID + ": " + ui_shortenBytes(bytesReceived) + "/" + ui_shortenBytes(bytesTotal));
 		return true;
 	}).then(function(cache) { 
-		var not = ui_setNotification(notID, 'Caching ' + videoID + ': ' + ui_shortenBytes(cache.size) + ' - ' +
+		var not = ui_setNotification(notID, "Caching " + videoID + ": " + (cache.size? ui_shortenBytes(cache.size) : "Done, unknown size") + " - " +
 			'<button id="seeCacheButton">View Cache</button>', 3000);
 		not.notContent.children[0].onclick = function() { not.notClose(); ct_navCache(); };
 		video.cache = cache;
 		// In case current view is cache, update the view
 		db_getCachedVideos().then(ui_setupCache);
 	}).catch(function(e) {
-		if (!abort) ui_setNotification(notID, 'Caching ' + videoID + ': ' + (e?.message  || "Unknown Error"));
+		if (!abort) ui_setNotification(notID, "Caching " + videoID + ": " + (e?.message  || "Unknown Error"));
 	});
 }
 
@@ -1560,7 +1562,7 @@ function db_getCachedVideos () {
 		});
 	});
 }
-function db_cacheStream (video, progress) {
+function db_cacheStream (video, type, progress) {
 	if (!video.ready) return Promise.reject({ message: "Video not ready!" });
 	if (!("serviceWorker" in navigator) || !sw_current) return Promise.reject({ message: "No Service Worker - reload!"});
 
@@ -1574,26 +1576,26 @@ function db_cacheStream (video, progress) {
 	};
 	var controller = new AbortController();
 
-	// GITHUB UPDATE DAMMIT
-	return fetch(stream.url, { headers: { "range": "bytes=0-" }, mode: "no-cors", signal: controller.signal })
+	var request = new Request(stream.url, { headers: { "range": "bytes=0-" }, signal: controller.signal });
+	if (type == "opaque") // Either fetch opaque (no idea about true size, download progress, etc)
+		request.mode = "no-cors";
+	else // Or fetch over own server, adding to server load
+		request.url = ct_pref.corsAPIHost + request.url;
+	return fetch(request)
 	.then(function(response) {
 		if (response.type == "opaque") {
 
-			cacheObj.size = 0;
-			cacheObj.progress = 0;
+			cacheObj.size = undefined;
+			cacheObj.progress = undefined;
 			// Add to cache
-			console.log("Got opaque response, opening cache!");
 			return window.caches.open("flagplayer-media")
 			.then(function(cache) {
-				console.log("Openined cache, putting url " + cacheObj.url + "!");
 				return cache.put(cacheObj.url, response);
 			})
 			.catch((e) => {
-				console.log("Catch error", e);
-				throw { message: "Opaque caching failed! Error:" + (e?.message || "Unknown") };
+				throw { message: "Opaque download/cache failed! Error:" + (e?.message || "Unknown") };
 			})
-			.then(function(e) {
-				console.log("Successfully put to cache, now writing to db!", e);
+			.then(function() {
 				return db_access().then(function() {
 					return new Promise (function(resolve, reject) {
 						var dbVideos = db_database.transaction("videos", "readwrite").objectStore("videos");
@@ -1603,7 +1605,6 @@ function db_cacheStream (video, progress) {
 							cachedVideo.cache = cacheObj;
 							var setVidReq = dbVideos.put(cachedVideo);
 							setVidReq.onsuccess = function() {
-								console.log("Written to db!");
 								cacheObj.message = "Cached opaque!";
 								resolve(cacheObj);
 							};
@@ -1619,6 +1620,7 @@ function db_cacheStream (video, progress) {
 				})
 			});
 		}
+		// Handle normal (non-opaque) response with progress indicator available
 
 		if (!response.ok)
 			return Promise.reject(new NetworkError(response));
