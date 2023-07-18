@@ -1964,7 +1964,7 @@ function yt_generateContinuationLoader(handleItems, api) {
 				items = contents.contents;
 			} else { // Desktop
 				contents = pagedData.onResponseReceivedActions || pagedData.onResponseReceivedEndpoints || pagedData.onResponseReceivedCommands;
-				contents = contents?[0]?.appendContinuationItemsAction;
+				contents = contents?.[0]?.appendContinuationItemsAction;
 				if (!contents)
 				{ // This does seem to work
 					data.continuation.itctToken = pagedData.trackingParams;
