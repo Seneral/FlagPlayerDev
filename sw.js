@@ -106,6 +106,8 @@ self.addEventListener('fetch', function(event) {
 				// Fetch from net
 				return fetch(event.request)
 				.then(function(response) {
+					if (!response)
+						console.warning("Response is undefined!", event.request);
 					if (!response || (response.status !== 200 && response.status !== 0) || response.type == 'error')
 						return response;
 					// Cache if desired
