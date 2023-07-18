@@ -1574,7 +1574,7 @@ function db_cacheStream (video, progress) {
 	};
 	var controller = new AbortController();
 
-	return fetch(stream.url, { headers: { "range": "bytes=0-", "mode": "no-cors" }, signal: controller.signal })
+	return fetch(stream.url, { headers: { "range": "bytes=0-" }, mode: "no-cors", signal: controller.signal })
 	.then(function(response) {
 		if (!response.ok)
 			return Promise.reject(new NetworkError(response));
