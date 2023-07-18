@@ -1576,7 +1576,7 @@ function db_cacheStream (video, type, progress) {
 	};
 	var controller = new AbortController();
 
-	var request = new Request(type == "opaque"? stream.url : ct_pref.corsAPIHost + request.url, 
+	var request = new Request(type == "opaque"? stream.url : ct_pref.corsAPIHost + stream.url, 
 		{ headers: { "range": "bytes=0-" }, mode: type == "opaque"? "no-cors" : "cors", signal: controller.signal });
 	return fetch(request)
 	.then(function(response) {
