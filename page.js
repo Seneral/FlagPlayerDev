@@ -1634,13 +1634,13 @@ function db_cacheStream (video, progress) {
 						var setVidReq = dbVideos.put(cachedVideo);
 						setVidReq.onsuccess = function() {
 							console.log(status);
-							if (status == "success") {
-								cacheObj.message = "Successfully cached!";
-								resolve(cacheObj);
+							if (status == "cache") {
+								cacheObj.message = "Partially cached - Cache or network error";
+								reject(cacheObj);
 							}
 							else {
-								cacheObj.message = "Partially cached - " + (status == "cache"? "Cache or network error" : "Unknown error");
-								reject(cacheObj);
+								cacheObj.message = "Successfully cached!";
+								resolve(cacheObj);
 							}
 						};
 						setVidReq.onerror = function(err) {
