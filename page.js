@@ -713,7 +713,7 @@ function ct_cacheVideo(video) {
 		// In case current view is cache, update the view
 		db_getCachedVideos().then(ui_setupCache);
 	}).catch(function(e) {
-		if (!abort) ui_setNotification(notID, 'Caching ' + videoID + ': Error: ' + (e || "unknown"));
+		if (!abort) ui_setNotification(notID, 'Caching ' + videoID + ': ' + (e?.message  || "Unknown Error"));
 	});
 }
 
@@ -980,7 +980,7 @@ function ct_loadMedia () {
 			ct_online = false;
 		cacheLoad.then(function() {
 			if (yt_video.mediaCache != undefined) {
-				console.error(error.name + (error.code? " " + error.code : "") + ": " + error.status + "  ", error.stack);
+				console.error(error.name + (error.code? " " + error.code : "") + ": " + error.message + "  ", error.stack);
 				console.warn("Error while loading ... Using cache fallback!");
 				yt_video.streams = [];
 				ct_mediaLoaded();
@@ -1076,13 +1076,13 @@ function ct_mediaError (error) {
 		md_paused = true;
 		md_flags.buffering = false;
 		md_flags.seeking = false;
-		md_errorText = error.name + ": " + error.status;
+		md_errorText = error.name + ": " + error.message;
 		ui_updatePlayerState();
 	}
 	// Skip video if error isn't minor
 	if (!error.minor) ct_startAutoplay(8);
 	// Debug
-	console.error(error.name + (error.code? " " + error.code : "") + ": " + error.status + (error.tagname? " in " + error.tagname : "") + "  ", error.stack);
+	console.error(error.name + (error.code? " " + error.code : "") + ": " + error.message + (error.tagname? " in " + error.tagname : "") + "  ", error.stack);
 }
 function ct_mediaEnded () {
 	if (md_curTime < md_totalTime-2) {
@@ -1601,7 +1601,7 @@ function db_cacheStream (video, progress) {
 			}));
 		})
 		.catch(() => {
-			throw "network";
+			throw "cache";
 		});
 
 		var progressWatch = new Promise(async function(resolve, reject) {
@@ -1620,8 +1620,8 @@ function db_cacheStream (video, progress) {
 		return Promise.all([cacheWrite, progressWatch])
 		.catch(function(status) {
 			if (status == "aborted")
-				throw "aborted";
-			return status; // network
+				throw { message: "Aborted!" };
+			return status; // cache
 		})
 		.then(function(status) {
 			return db_access().then(function() {
@@ -1634,18 +1634,22 @@ function db_cacheStream (video, progress) {
 						var setVidReq = dbVideos.put(cachedVideo);
 						setVidReq.onsuccess = function() {
 							console.log(status);
-							if (status != "network")
+							if (status == "success") {
+								cacheObj.message = "Successfully cached!";
 								resolve(cacheObj);
-							else
+							}
+							else {
+								cacheObj.message = "Partially cached - " + (status == "cache"? "Cache or network error" : "Unknown error");
 								reject(cacheObj);
+							}
 						};
 						setVidReq.onerror = function(err) {
-							reject("database" + err);
+							reject({ message: "Database error: " + err });
 						};
 						db_requestPersistence();
 					};
 					getVidReq.onerror = function(err) {
-						reject("database" + err);
+						reject({ message: "Database error: " + err });
 					};
 				});
 			})
@@ -3717,7 +3721,7 @@ function ui_resetSearch () {
 }
 function ui_setSearchError (error) {
 	sec_search.style.display = "block";
-	I("searchContainer").innerHTML = error.name + " while loading Search Page: " + (error.status || error.message);
+	I("searchContainer").innerHTML = error.name + " while loading Search Page: " + error.message;
 }
 
 
@@ -3821,7 +3825,7 @@ function ui_resetChannelUploads () {
 	I("chVideoContainer").innerHTML = "";
 }
 function ui_setChannelError (error) {
-	I("chVideoContainer").innerHTML = error.name + " while loading Channel Page: " + (error.status || error.message);
+	I("chVideoContainer").innerHTML = error.name + " while loading Channel Page: " + error.message;
 }
 
 
@@ -5169,30 +5173,27 @@ function md_assureSync () {
 
 class ParseError extends Error {
 	constructor (code, message, minor, object) {
-		super("");
-		this.status = message;
+		super(message || "No message");
 		this.name = "Parse Error";
-		this.code = code;
+		this.code = code || -1;
 		this.minor = minor || false;
 		this.object = object;
 	}
 }
 class PlaybackError extends Error {
 	constructor (code, message, minor, tag) {
-		super("");
-		this.status = message;
+		super(message || "No message");
 		this.name = "Playback Error";
-		this.code = code;
+		this.code = code || -1;
 		this.minor = minor;
 		this.tag = tag;
 	}
 }
 class NetworkError extends Error {
 	constructor (response, message, code) {
-		super("");
-		this.status = response? response.statusText : message;
+		super(message || response?.statusText || "No message");
 		this.name = "Network Error";
-		this.code = response? response.status : code;
+		this.code = code || response?.status || -1;
 	}
 }
 
