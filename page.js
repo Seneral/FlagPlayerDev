@@ -4434,10 +4434,11 @@ function onSettingsChange (hint) {
 	switch (hint) {
 		case "CH":
 			ct_pref.corsAPIHost = I("st_corsHost").value;
-			if (!ct_pref.corsAPIHost.endsWith('/')) {
+			if (!ct_pref.corsAPIHost)
+				ct_pref.corsAPIHost = HOST_CORS;
+			if (!ct_pref.corsAPIHost.endsWith('/'))
 				ct_pref.corsAPIHost += '/';
-				I("st_corsHost").value += '/';
-			}
+			I("st_corsHost").value = ct_pref.corsAPIHost;
 			break;
 		case "FV":
 			ct_pref.filterHideCompletely = I("st_filter_hide").checked;

@@ -125,7 +125,7 @@ self.addEventListener('fetch', function(event) {
 				return fetch(event.request)
 				.then(function(response) {
 					if (!response || (response.status !== 200 && response.status !== 0) || response.type == 'error') {
-						console.log("Fetching request " + event.request + " resulted in erroneous response " + response + "!");
+						console.log("Fetching request ", event.request, " resulted in erroneous response ", response, "!");
 						return response;
 					}
 					// Cache if desired
@@ -133,10 +133,10 @@ self.addEventListener('fetch', function(event) {
 						var cacheResponse = response.clone();
 						event.waitUntil(caches.open(APP_CACHE).then(cache => cache.put(event.request, cacheResponse)));
 					}
-					console.log("Fetching request " + event.request + " resulted in response " + response + "!");
+					console.log("Fetching request ", event.request, " resulted in response ", response, "!");
 					return response;
 				}).catch(function(error) {
-					console.log("Fetching request " + event.request + " returned error " + error + "!");
+					console.log("Fetching request ", event.request, " returned error ", error, "!");
 				});
 			})
 		);
