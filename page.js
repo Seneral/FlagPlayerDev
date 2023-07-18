@@ -1574,12 +1574,50 @@ function db_cacheStream (video, progress) {
 	};
 	var controller = new AbortController();
 
+	// GITHUB UPDATE DAMMIT
 	return fetch(stream.url, { headers: { "range": "bytes=0-" }, mode: "no-cors", signal: controller.signal })
 	.then(function(response) {
+		if (response.type == "opaque") {
+
+			cacheObj.size = 0;
+			cacheObj.progress = 0;
+			// Add to cache
+			return window.caches.open("flagplayer-media")
+			.then(function(cache) {
+				return cache.put(cacheObj.url, response);
+			})
+			.catch((e) => {
+				throw { message: "Opaque caching failed! Error:" + (e?.message || "Unknown") };
+			})
+			.then(function() {
+				return db_access().then(function() {
+					return new Promise (function(resolve, reject) {
+						var dbVideos = db_database.transaction("videos", "readwrite").objectStore("videos");
+						var getVidReq = dbVideos.get(cacheID);
+						getVidReq.onsuccess = function(e) {
+							var cachedVideo = e.target.result || db_currentVideoAsCache();
+							cachedVideo.cache = cacheObj;
+							var setVidReq = dbVideos.put(cachedVideo);
+							setVidReq.onsuccess = function() {
+								cacheObj.message = "Cached opaque!";
+								resolve(cacheObj);
+							};
+							setVidReq.onerror = function(err) {
+								reject({ message: "Database error: " + err });
+							};
+							db_requestPersistence();
+						};
+						getVidReq.onerror = function(err) {
+							reject({ message: "Database error: " + err });
+						};
+					});
+				})
+			});
+		}
+
 		if (!response.ok)
 			return Promise.reject(new NetworkError(response));
 
-		
 		cacheObj.size = parseInt(response.headers.get("content-length"));
 		cacheObj.progress = 0;
 		if (progress && !progress(cacheObj.progress, cacheObj.size)) {
@@ -1654,8 +1692,7 @@ function db_cacheStream (video, progress) {
 					};
 				});
 			})
-			
-		})
+		});
 	});
 }
 function db_deleteCachedStream (cacheID) {
