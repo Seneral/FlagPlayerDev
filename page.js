@@ -1582,14 +1582,18 @@ function db_cacheStream (video, progress) {
 			cacheObj.size = 0;
 			cacheObj.progress = 0;
 			// Add to cache
+			console.log("Got opaque response, opening cache!");
 			return window.caches.open("flagplayer-media")
 			.then(function(cache) {
+				console.log("Openined cache, putting url " + cacheObj.url + "!");
 				return cache.put(cacheObj.url, response);
 			})
 			.catch((e) => {
+				console.log("Catch error", e);
 				throw { message: "Opaque caching failed! Error:" + (e?.message || "Unknown") };
 			})
-			.then(function() {
+			.then(function(e) {
+				console.log("Successfully put to cache, now writing to db!", e);
 				return db_access().then(function() {
 					return new Promise (function(resolve, reject) {
 						var dbVideos = db_database.transaction("videos", "readwrite").objectStore("videos");
@@ -1599,6 +1603,7 @@ function db_cacheStream (video, progress) {
 							cachedVideo.cache = cacheObj;
 							var setVidReq = dbVideos.put(cachedVideo);
 							setVidReq.onsuccess = function() {
+								console.log("Written to db!");
 								cacheObj.message = "Cached opaque!";
 								resolve(cacheObj);
 							};
