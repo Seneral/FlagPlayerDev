@@ -705,11 +705,11 @@ function ct_cacheVideo(video) {
 	ui_setNotification(notID, "Caching " + videoID + "...").notOnClose = function() { abort = true; };
 	db_cacheStream(video, type, function(bytesReceived, bytesTotal) {
 		// Not called if type == opaque
-		if (interrupted) return 0;
+		if (interrupted) { console.log("Acting on interruption!"); return 0; }
 		if (abort) return false;
 		var not = ui_setNotification(notID, "Caching " + videoID + ": " + ui_shortenBytes(bytesReceived) + "/" + ui_shortenBytes(bytesTotal) +
 		'<button>Interrupt Caching</button>');
-		not.notContent.children[0].onclick = function() { not.notOnClose = false; not.notClose(); interrupted = true; };
+		not.notContent.children[0].onclick = function() { not.notClose(); abort = false; interrupted = true; console.log("Interrupting caching process at " +bytesReceived + " bytes received!"); };
 		return true;
 	}).then(function(cache) { 
 		var not = ui_setNotification(notID, "Caching " + videoID + ": " + (cache.size? ui_shortenBytes(cache.size) : "Done, unknown size") + " - " +
@@ -1680,7 +1680,8 @@ function db_cacheStream (video, type, progress) {
 						controller.abort();
 						return reject("aborted");
 					}
-					if (status === -1) {
+					if (status === 0) {
+						console.log("Interrupted, simulating cache/network error!");
 						controller.abort();
 						return reject("cache");
 					}
