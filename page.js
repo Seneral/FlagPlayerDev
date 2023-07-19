@@ -1711,9 +1711,10 @@ function db_cacheStream (video, type, progress) {
 
 		var cacheStream = new ReadableStream({
 			start(controller) {
+				const reader = startStream.getReader();
 				return pumpCached();
 				function pumpCached () {
-					return startStream.read().then(({ done, value }) => {
+					return reader.read().then(({ done, value }) => {
 					if (done) return pumpDownload();
 					controller.enqueue(value);
 					return pumpCached();
