@@ -708,12 +708,12 @@ function ct_cacheVideo(video) {
 		if (interrupted) return 0;
 		if (abort) return false;
 		var not = ui_setNotification(notID, "Caching " + videoID + ": " + ui_shortenBytes(bytesReceived) + "/" + ui_shortenBytes(bytesTotal) +
-		'<button id="pauseCachingButton">Interrupt Caching</button>');
+		'<button>Interrupt Caching</button>');
 		not.notContent.children[0].onclick = function() { not.notOnClose = false; not.notClose(); interrupted = true; };
 		return true;
 	}).then(function(cache) { 
 		var not = ui_setNotification(notID, "Caching " + videoID + ": " + (cache.size? ui_shortenBytes(cache.size) : "Done, unknown size") + " - " +
-			'<button id="seeCacheButton">View Cache</button>', 3000);
+			'<button>View Cache</button>', 3000);
 		not.notContent.children[0].onclick = function() { not.notClose(); ct_navCache(); };
 		video.cache = cache;
 		// In case current view is cache, update the view
@@ -1570,9 +1570,19 @@ function db_cacheStream (video, type, progress) {
 	if (!video.ready) return Promise.reject({ message: "Video not ready!" });
 	if (!("serviceWorker" in navigator) || !sw_current) return Promise.reject({ message: "No Service Worker - reload!"});
 
+	var exCache = video.mediaCache;
+	if (exCache && exCache.quality >= ct_pref.cacheAudioQuality && exCache.progress == exCache.size && exCache.size > 0)
+		return Promise.resolve(exCache); // Existing complete cache of same or equal quality, except for opaque caches (size==0) that might be wrong 
+
+	var streamSelection = md_selectableStreams(video, true).dashAudio;
+	var stream = undefined;
+	if (exCache) stream = streamSelection.find(s => s.itag = exCache.itag);
+	if (!stream) stream = md_selectStream(streamSelection, ct_pref.cacheAudioQuality, md_daVal);
+	var startByte = 0;
+	if (exCache?.itag == stream.itag) startByte = exCache.progress;
+
 	var cacheID = video.videoID;
 	// Select first stream at or below bitrate
-	var stream = md_selectStream(md_selectableStreams(video, true).dashAudio, ct_pref.cacheAudioQuality, md_daVal);
 	var cacheObj = { 
 		url: VIRT_CACHE + cacheID,
 		quality: stream.aBR,
@@ -1580,8 +1590,14 @@ function db_cacheStream (video, type, progress) {
 	};
 	var controller = new AbortController();
 
+	console.log("Planning to download itag " + itag);
+	if (exCache)
+		console.log("Found existing cache information of itag " + exCache.itag + ", downloaded " + exCache.progress + "/" + exCache.size);
+	if (startByte)
+		console.log("Decided to continue downloading from byte " + startByte + "/" + exCache.size);
+
 	var request = new Request(type == "opaque"? stream.url : ct_pref.corsAPIHost + stream.url, 
-		{ headers: { "range": "bytes=0-" }, mode: type == "opaque"? "no-cors" : "cors", signal: controller.signal });
+		{ headers: { "range": "bytes=" + startByte + "-" }, mode: type == "opaque"? "no-cors" : "cors", signal: controller.signal });
 	return fetch(request)
 	.then(function(response) {
 		if (response.type == "opaque") {
