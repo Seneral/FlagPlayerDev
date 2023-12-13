@@ -6,7 +6,7 @@ Licensed under AGPLv3
 See https://github.com/Seneral/FlagPlayer for details
 */
 
-var VERSION = 51;
+var VERSION = 36;
 var APP_CACHE = "flagplayer-cache-1";
 var IMG_CACHE = "flagplayer-thumbs";
 var MEDIA_CACHE = "flagplayer-media";
@@ -88,12 +88,30 @@ self.addEventListener('fetch', function(event) {
 		event.respondWith(caches.match("./index.html"));
 	}
 	else if (url.includes(VIRT_CACHE)) { // Try to read from the media cache
-		//var bytes = /^bytes\=(\d+)\-$/g.exec(event.request.headers.get('range'));
-		//var pos = Number(bytes? bytes[1] : 0);
+		var bytes = /^bytes\=(\d+)\-$/g.exec(event.request.headers.get('range'));
+		var pos = Number(bytes? bytes[1] : 0);
 		event.respondWith(
 			caches.open("flagplayer-media")
 			.then(function(cache) {
 				return cache.match(url);
+			}).then(function(cacheResponse) {
+				if (cacheResponse)
+					return cacheResponse;
+				return fetch(event.request);
+			}).then(function(response) {
+				return response.arrayBuffer()
+				.then(function(byteData) {
+					return new Response(byteData.slice(pos), {
+						status: 206,
+						statusText: 'Partial Content',
+						headers: [
+							['Content-Type', response.headers.get("content-type") ],
+							['Content-Range', 'bytes ' + pos + '-' +
+								(byteData.byteLength - 1) + '/' + byteData.byteLength
+							]
+						]
+					});
+				})
 			})
 		);
 	}
@@ -106,8 +124,6 @@ self.addEventListener('fetch', function(event) {
 				// Fetch from net
 				return fetch(event.request)
 				.then(function(response) {
-					if (!response)
-						console.warning("Response is undefined!", event.request);
 					if (!response || (response.status !== 200 && response.status !== 0) || response.type == 'error')
 						return response;
 					// Cache if desired
@@ -116,10 +132,7 @@ self.addEventListener('fetch', function(event) {
 						event.waitUntil(caches.open(APP_CACHE).then(cache => cache.put(event.request, cacheResponse)));
 					}
 					return response;
-				}).catch(function(error) {
-					console.error(error);
-					throw error;
-				});
+				}).catch(function(error) {});
 			})
 		);
 	}

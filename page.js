@@ -169,7 +169,7 @@ var md_state = State.None; // Lifetime: loading - prestart (if autoplay denied) 
 var md_sources = undefined; // { video: url, audio: url }
 var md_paused = true; // Current state or intent
 var md_flags = { buffering: false, seeking: false } // Only valid during State.Started
-var md_isPlaying = function() { return md_sources && md_state == State.Started && !md_paused && !md_flags.buffering && !md_flags.seeking; };
+var md_isPlaying = function () { return md_sources && md_state == State.Started && !md_paused && !md_flags.buffering && !md_flags.seeking; };
 var md_curTime = 0, md_totalTime = 0;
 var md_errorText = "An Error occured!"; // Error message if md_state == State.Error
 var md_pref = {}; // volume, muted, playlistRandom, autoplay, dash, dashVideo, dashContainer, legacyVideo
@@ -250,7 +250,7 @@ function sw_install () {
 	// Setup service worker for caching control
 	if ("serviceWorker" in navigator) {
 
-		navigator.serviceWorker.oncontrollerchange = function() {
+		navigator.serviceWorker.oncontrollerchange = function () {
 			if (sw_refreshing) return;
 			window.location.reload();
 			sw_refreshing = true;
@@ -262,11 +262,11 @@ function sw_install () {
 			if (sw_current) console.log("Successfully installed service worker: Caching and Offline Mode are available!");
 			else console.log("Successfully installed service worker: Caching and Offline Mode are available after reload!");
 			// Check for updates
-			registration.onupdatefound = function() {
+			registration.onupdatefound = function () {
 				if (!navigator.serviceWorker.controller) 
 					return; // not an update, but initial installation
 				console.log("Found new service worker version!");
-				var update = function() {
+				var update = function () {
 					sw_updated = registration.waiting || registration.active;
 					var not = ui_setNotification("newVersionPanel", 'A new version is available! <button>Update now</button>');
 					not.children[0].onclick = function() {
@@ -277,7 +277,7 @@ function sw_install () {
 				};
 				var installing = registration.installing;
 				if (installing) { // wait until installed to update
-					installing.onstatechange = function() {
+					installing.onstatechange = function () {
 						if (installing.state == "installed" || installing.state == "active") 
 							update();
 					};
@@ -305,7 +305,7 @@ function sw_install () {
 Object.defineProperties(Array.prototype, {
 	// Add method to array prototype to extract (find by existence and return) a member of a list
 	extract: {
-		value: function(fn) {
+		value: function (fn) {
 			for (let x of this) {
 				var res = fn(x);
 				if (res != undefined)
@@ -316,7 +316,7 @@ Object.defineProperties(Array.prototype, {
 	},
 	// Add method to array prototype to gather (filter by existence and map) members of a list
 	gather: {
-		value: function(fn) {
+		value: function (fn) {
 			var arr = [];
 			for (let x of this) {
 				var res = fn(x);
@@ -549,7 +549,7 @@ function ct_updatePageState () { // Update page with new information
 	document.title = state.title;
 	if (history && history.replaceState) history.replaceState(state, state.title, url.href);
 	else window.location = url; // Triggers reload, not perfect but better than no link update
-	[].forEach.call(document.getElementsByClassName("youtubeLink"), function(l) { l.href = yt_url });
+	[].forEach.call(document.getElementsByClassName("youtubeLink"), function (l) { l.href = yt_url });
 }
 function ct_getNavLink(navID) {
 	var i = navID.indexOf("=");
@@ -658,7 +658,7 @@ function ct_triggerPagedContent(pagedContent) {
 		pagedContent.loading = false;
 		if (pagedContent.autoTrigger && pagedContent.triggerDistance == undefined)
 			ct_checkPagedContent();
-	}).catch (function(error) {
+	}).catch (function (error) {
 		console.error("Paged content failed: ", error);
 	});
 }
@@ -700,26 +700,20 @@ function ct_cacheVideo(video) {
 	var videoID = video.videoID;
 	var notID = 'cache-' + videoID;
 	var abort = false;
-	var interrupted = false;
-	var type = "normal"; // "normal" - normal is better but uses more cors server resources as all cached audio is directed over it
 	ui_setNotification(notID, "Caching " + videoID + "...").notOnClose = function() { abort = true; };
-	db_cacheStream(video, type, function(bytesReceived, bytesTotal) {
-		// Not called if type == opaque
-		if (interrupted) { console.log("Acting on interruption!"); return 0; }
+	db_cacheStream(video, function(bytesReceived, bytesTotal) {
 		if (abort) return false;
-		var not = ui_setNotification(notID, "Caching " + videoID + ": " + ui_shortenBytes(bytesReceived) + "/" + ui_shortenBytes(bytesTotal) +
-		'<button>Interrupt Caching</button>');
-		not.notContent.children[0].onclick = function() { not.notClose(); abort = false; interrupted = true; console.log("Interrupting caching process at " +bytesReceived + " bytes received!"); };
+		ui_setNotification(notID, 'Caching ' + videoID + ': ' + ui_shortenBytes(bytesReceived) + '/' + ui_shortenBytes(bytesTotal) + '');
 		return true;
 	}).then(function(cache) { 
-		var not = ui_setNotification(notID, "Caching " + videoID + ": " + (cache.size? ui_shortenBytes(cache.size) : "Done, unknown size") + " - " +
-			'<button>View Cache</button>', 3000);
-		not.notContent.children[0].onclick = function() { not.notClose(); ct_navCache(); };
+		var not = ui_setNotification(notID, 'Caching ' + videoID + ': ' + ui_shortenBytes(cache.size) + ' - ' +
+			'<button id="seeCacheButton">View Cache</button>', 3000);
+		not.notContent.children[0].onclick = function () { not.notClose(); ct_navCache(); };
 		video.cache = cache;
 		// In case current view is cache, update the view
 		db_getCachedVideos().then(ui_setupCache);
 	}).catch(function(e) {
-		if (!abort) ui_setNotification(notID, "Caching " + videoID + ": " + (e?.message  || "Unknown Error"));
+		if (!abort) ui_setNotification(notID, 'Caching ' + videoID + ': Error: ' + (e? e.message : "unknown"));
 	});
 }
 
@@ -738,7 +732,7 @@ function ct_loadPlaylist (plID) {
 	ct_pagePlaylist = true;
 	ct_updatePageState();
 	db_loadPlaylist(plID)
-	.then(function(playlist) {
+	.then(function (playlist) {
 		if (plID != yt_playlistID) return Promise.resolve(); // Changed while loading
 		yt_playlist = playlist;
 		ui_addToPlaylist(0);
@@ -767,7 +761,7 @@ function ct_savePlaylist () {
 }
 function ct_removePlaylist () {
 	if (!yt_playlist) return;
-	db_removePlaylist(yt_playlist.listID).then(function() {
+	db_removePlaylist(yt_playlist.listID).then(function () {
 		ui_setPlaylistSaved (false);
 		ui_setupHome();
 	});
@@ -857,7 +851,7 @@ function ct_loadChannel() {
 		ui_setupChannelTabs();
 		// Browse tabs need to load first to get continuation data - wait and then update UI
 		if (yt_channel.uploads.loadingTabs) {
-			yt_channel.uploads.loadingTabs.forEach(function(tabLoader) {
+			yt_channel.uploads.loadingTabs.forEach(function (tabLoader) {
 				tabLoader.then(ui_fillChannelTab);
 			});
 		}
@@ -926,7 +920,7 @@ function ct_canPlay () {
 function ct_loadMedia () {
 	var loadingID = yt_videoID;
 	// Load and display cached data
-	var cacheLoad = db_getVideo(yt_videoID).then(function(video) {
+	var cacheLoad = db_getVideo(yt_videoID).then(function (video) {
 		if (!yt_video || loadingID != yt_videoID) return Promise.reject();
 		yt_video.cachedMetadata = true;
 		yt_video.mediaCache = video.cache;
@@ -986,7 +980,7 @@ function ct_loadMedia () {
 			ct_online = false;
 		cacheLoad.then(function() {
 			if (yt_video.mediaCache != undefined) {
-				console.error(error.name + (error.code? " " + error.code : "") + ": " + error.message + "  ", error.stack);
+				console.error(error.name + (error.code? " " + error.code : "") + ": " + error.status + "  ", error.stack);
 				console.warn("Error while loading ... Using cache fallback!");
 				yt_video.streams = [];
 				ct_mediaLoaded();
@@ -1051,7 +1045,7 @@ function ct_mediaError (error) {
 		/*
 		console.error("Cached media file erroneous! Removing from cache. ", error);
 		md_resetStreams();
-		db_deleteCachedStream(yt_videoID).then (function() {
+		db_deleteCachedStream(yt_videoID).then (function () {
 			if (ct_online) { // Load source
 				md_updateStreams();
 				ui_updateStreamState();
@@ -1082,13 +1076,13 @@ function ct_mediaError (error) {
 		md_paused = true;
 		md_flags.buffering = false;
 		md_flags.seeking = false;
-		md_errorText = error.name + ": " + error.message;
+		md_errorText = error.name + ": " + error.status;
 		ui_updatePlayerState();
 	}
 	// Skip video if error isn't minor
 	if (!error.minor) ct_startAutoplay(8);
 	// Debug
-	console.error(error.name + (error.code? " " + error.code : "") + ": " + error.message + (error.tagname? " in " + error.tagname : "") + "  ", error.stack);
+	console.error(error.name + (error.code? " " + error.code : "") + ": " + error.status + (error.tagname? " in " + error.tagname : "") + "  ", error.stack);
 }
 function ct_mediaEnded () {
 	if (md_curTime < md_totalTime-2) {
@@ -1225,7 +1219,7 @@ function db_requestPersistence() {
 	}
 }
 function db_access () {
-	return new Promise (function(resolve, reject) {
+	return new Promise (function (resolve, reject) {
 		if (!window.indexedDB) {
 			console.error("Database not supported!");
 			return reject();
@@ -1238,7 +1232,7 @@ function db_access () {
 		if (db_loading) return;
 		db_loading = true;
 		// Error handler:
-		var error = function(error) { // Setup database-wide error handling
+		var error = function (error) { // Setup database-wide error handling
 			console.error("Database Error:", error.target.error.message);
 			db_accessCallbacks.forEach((p) => p.reject());
 			db_accessCallbacks = [];
@@ -1246,7 +1240,7 @@ function db_access () {
 		// Start request
 		var request = indexedDB.open("ContentDatabase", 1);
 		request.onerror = error;
-		request.onupgradeneeded = function(e) { // Create database
+		request.onupgradeneeded = function (e) { // Create database
 			console.log("Initializing Content Database!", e);
 			db_database = e.target.result;
 			db_database.onerror = error;
@@ -1255,10 +1249,10 @@ function db_access () {
 			if (!db_database.objectStoreNames.contains("videos"))
 				db_database.createObjectStore("videos", { keyPath: "videoID" });
 		};
-		request.onsuccess = function(e) { // Ready
+		request.onsuccess = function (e) { // Ready
 			db_database = e.target.result;
 			db_database.onerror = error;
-			db_database.onclose = function(e) { // Setup database-wide error handling
+			db_database.onclose = function (e) { // Setup database-wide error handling
 				console.error("Database Closed Unexpectedly!", e);
 				db_database = undefined;
 			};
@@ -1269,7 +1263,7 @@ function db_access () {
 	});
 }
 function db_accessPlaylists () {
-	return new Promise (function(resolve, reject) {
+	return new Promise (function (resolve, reject) {
 		if (db_playlists != undefined)
 			return resolve();
 		// Only on index load request at a time
@@ -1278,10 +1272,10 @@ function db_accessPlaylists () {
 		db_indexLoading = true;
 		// Start request
 		db_access ()
-		.then(function() {
+		.then(function () {
 			var playlistStore = db_database.transaction("playlists", "readonly").objectStore("playlists");
 			var playlists = [];
-			playlistStore.openCursor().onsuccess = function(e) {
+			playlistStore.openCursor().onsuccess = function (e) {
 				if (e.target.result) {
 					var playlist = e.target.result.value;
 					playlist.videos = undefined; // Don't store all ids in index
@@ -1307,11 +1301,11 @@ function db_getSavedPlaylist (plID) {
 }
 function db_removePlaylist (listID) {
 	if (!listID) return Promise.reject();
-	return db_accessPlaylists().then(function() {
+	return db_accessPlaylists().then(function () {
 		return new Promise(function(resolve, reject) {
 			db_database.transaction("playlists", "readwrite")
 			.objectStore("playlists")
-			.delete(listID).onsuccess = function() {
+			.delete(listID).onsuccess = function () {
 				var index = db_playlists.findIndex(p => p.listID == listID);
 				if (index != -1) db_playlists.splice(index, 1);
 				resolve();
@@ -1324,7 +1318,7 @@ function db_updatePlaylist (playlist) {
 	// Cache all playlist thumbnails using cors server
 	db_cacheMissingThumbnails(playlist.videos.filter(plVid => !plVid.unavailable).map(plVid => plVid.thumbnailURL));
 	// Update playlist	
-	return db_accessPlaylists().then(function() {
+	return db_accessPlaylists().then(function () {
 		var playlistWrite = new Promise (function(resolve, reject) {
 			// Request to update playlist
 			var playlistTransaction = db_database.transaction("playlists", "readwrite");
@@ -1337,7 +1331,7 @@ function db_updatePlaylist (playlist) {
 				description: playlist.description,
 				thumbnailURL: playlist.thumbnailURL || (HOST_YT_IMG + playlist.thumbID + '/default.jpg'),
 				count: playlist.count, 
-				videos: playlist.videos.map(function(v) { return v.videoID; }),
+				videos: playlist.videos.map(function (v) { return v.videoID; }),
 			};
 			playlistStore.put(playlistObj).onsuccess = resolve;
 			// Also write into playlists in memory
@@ -1349,7 +1343,7 @@ function db_updatePlaylist (playlist) {
 			// Request to add all videos (will overwrite existing ones with updated data)
 			var videoTransaction = db_database.transaction("videos", "readwrite");
 			var videoStore = videoTransaction.objectStore("videos");
-			playlist.videos.forEach (function(video) {
+			playlist.videos.forEach (function (video) {
 				videoStore.put(video);
 			});
 			videoTransaction.oncomplete = resolve;
@@ -1358,25 +1352,25 @@ function db_updatePlaylist (playlist) {
 	});
 }
 function db_loadPlaylist(listID) {
-	return db_access().then (function() {
-		return new Promise (function(resolve, reject) {
+	return db_access().then (function () {
+		return new Promise (function (resolve, reject) {
 			var playlistStore = db_database.transaction("playlists", "readonly").objectStore("playlists");
 			var listReq = playlistStore.get(listID);
-			listReq.onsuccess = function(pe) {
+			listReq.onsuccess = function (pe) {
 				var playlist = pe.target.result;
 				if (!playlist) return reject();
-				var videoIDs = playlist.videos.map(function(id, i) { return { i: i, id: id } });
+				var videoIDs = playlist.videos.map(function (id, i) { return { i: i, id: id } });
 
 				var videoTransaction = db_database.transaction("videos", "readonly");
 				var videoStore = videoTransaction.objectStore("videos");
 
 				playlist.videos = [];
-				videoIDs.forEach (function(v) {
-					videoStore.get(v.id).onsuccess = function(e) {
+				videoIDs.forEach (function (v) {
+					videoStore.get(v.id).onsuccess = function (e) {
 						playlist.videos[v.i] = e.target.result;
 					};
 				});
-				videoTransaction.oncomplete = function() {
+				videoTransaction.oncomplete = function () {
 					resolve(playlist);
 				};
 			};
@@ -1480,35 +1474,35 @@ function db_cacheThumbnails(thumbs) {
 			+ (cacheThumbFail > 0? (" - " + cacheThumbFail + " failed") : ""), 3000);
 	});
 }
-function db_videoAsCache(video) {
-	if (video == undefined)
+function db_currentVideoAsCache() {
+	if (yt_video == undefined)
 		return undefined;
 	return {
-		title: video.meta.title, 
-		videoID: video.videoID, 
-		length: video.meta.length, 
-		thumbnailURL: video.meta.thumbnailURL, 
+		title: yt_video.meta.title, 
+		videoID: yt_video.videoID, 
+		length: yt_video.meta.length, 
+		thumbnailURL: yt_video.meta.thumbnailURL, 
 		addedDate: new Date(), 
-		uploadedDate: video.meta.uploadedDate, 
+		uploadedDate: yt_video.meta.uploadedDate, 
 		uploader: {
-			name: video.meta.uploader.name,
-			channelID: video.meta.uploader.channelID,
-			url: video.meta.uploader.url,
+			name: yt_video.meta.uploader.name,
+			channelID: yt_video.meta.uploader.channelID,
+			url: yt_video.meta.uploader.url,
 		}, 
-		views: video.meta.views, 
-		likes: video.meta.likes, 
-		dislikes: video.meta.dislikes, 
-		comments: video.comments.count, // only works on mobile, or when comments are loaded on desktop 
+		views: yt_video.meta.views, 
+		likes: yt_video.meta.likes, 
+		dislikes: yt_video.meta.dislikes, 
+		comments: yt_video.comments.count, // only works on mobile, or when comments are loaded on desktop 
 		tags: "", // Got none of that
-		categoryID: video.meta.category,
+		categoryID: yt_video.meta.category,
 	};
 }
 function db_getStoredVideos () {
 	return db_access().then(function() {
-		return new Promise (function(resolve, reject) {
+		return new Promise (function (resolve, reject) {
 			var videoStore = db_database.transaction("videos", "readonly").objectStore("videos");
 			var storedVideos = [];
-			videoStore.openCursor().onsuccess = function(e) {
+			videoStore.openCursor().onsuccess = function (e) {
 				if (e.target.result) {
 					storedVideos.push(e.target.result.value);
 					e.target.result.continue();
@@ -1520,7 +1514,7 @@ function db_getStoredVideos () {
 	});
 }
 function db_storeVideo(video) {
-	return db_access().then(function() {
+	return db_access().then(function () {
 		return new Promise(function(resolve, reject) {
 			var transaction = db_database.transaction("videos", "readwrite")
 			.objectStore("videos").put(video);
@@ -1530,11 +1524,11 @@ function db_storeVideo(video) {
 	});
 }
 function db_getVideo(videoID) {
-	return db_access().then(function() {
+	return db_access().then(function () {
 		return new Promise(function(resolve, reject) {
 			var transaction = db_database.transaction("videos", "readonly")
 			.objectStore("videos").get(videoID);
-			transaction.onsuccess = function(e) {
+			transaction.onsuccess = function (e) {
 				if (e.target.result)
 					resolve(e.target.result);
 				else reject();
@@ -1553,7 +1547,7 @@ function db_getCachedVideos () {
 		return new Promise(function(resolve, reject) {
 			var videoStore = db_database.transaction("videos", "readonly").objectStore("videos");
 			var cachedVideos = [];
-			videoStore.openCursor().onsuccess = function(e) {
+			videoStore.openCursor().onsuccess = function (e) {
 				if (e.target.result) {
 					if (e.target.result.value.cache)
 						cachedVideos.push(e.target.result.value);
@@ -1566,310 +1560,89 @@ function db_getCachedVideos () {
 		});
 	});
 }
-function db_cacheStream (video, type, progress) {
+function db_cacheStream (video, progress) {
 	if (!video.ready) return Promise.reject({ message: "Video not ready!" });
 	if (!("serviceWorker" in navigator) || !sw_current) return Promise.reject({ message: "No Service Worker - reload!"});
 
-	var exCache = video.mediaCache;
-	if (exCache && exCache.quality >= ct_pref.cacheAudioQuality && exCache.status == "complete")
-		return Promise.resolve(exCache); // Existing complete cache of same or equal quality, except for opaque caches (size==0) that might be wrong
-
-	// Select first stream at or below bitrate, or continue existing stream
-	var streamSelection = md_selectableStreams(video, true).dashAudio;
-	var stream = undefined;
-	if (exCache) stream = streamSelection.find(s => s.itag = exCache.itag);
-	if (!stream) stream = md_selectStream(streamSelection, ct_pref.cacheAudioQuality, md_daVal);
-	var startByte = 0;
-	if (exCache?.itag == stream.itag) startByte = exCache.progress;
-
 	var cacheID = video.videoID;
+	// Select first stream at or below bitrate
+	var stream = md_selectStream(md_selectableStreams(video, true).dashAudio, ct_pref.cacheAudioQuality, md_daVal);
 	var cacheObj = { 
 		url: VIRT_CACHE + cacheID,
 		quality: stream.aBR,
 		itag: stream.itag,
 	};
+	var controller = new AbortController();
 
-	console.log("Planning to download itag " + stream.itag);
-	if (exCache)
-		console.log("Found existing cache information of itag " + exCache.itag + ", downloaded " + exCache.progress + "/" + exCache.size);
+	return fetch(ct_pref.corsAPIHost + stream.url, { headers: { "range": "bytes=0-" }, signal: controller.signal })
+	.then(function(response) {
+		if (!response.ok)
+			return Promise.reject(new NetworkError(response));
 
-	var updateCache = function(mediaCache, status) {
-		return db_access().then(function() {
-			return new Promise (function(resolve, reject) {
-				var dbVideos = db_database.transaction("videos", "readwrite").objectStore("videos");
-				var getVidReq = dbVideos.get(cacheID);
-				getVidReq.onsuccess = function(e) {
-					var cachedVideo = e.target.result || db_videoAsCache(video);
-					cachedVideo.cache = mediaCache;
-					var setVidReq = dbVideos.put(cachedVideo);
-					setVidReq.onsuccess = function() {
-						if (mediaCache.size == 0) {
-							mediaCache.status = "opaque";
-							resolve(mediaCache);
-						}
-						if (mediaCache.progress < mediaCache.size) {
-							mediaCache.status = "partial" + (status? " - " + status : "");
-							reject(mediaCache);
-						}
-						if (mediaCache.progress == mediaCache.size) {
-							mediaCache.status = "complete";
-							resolve(mediaCache);
-						}
-					};
-					setVidReq.onerror = function(err) {
-						reject({ message: "Database error: " + err });
-					};
-					db_requestPersistence();
-				};
-				getVidReq.onerror = function(err) {
-					reject({ message: "Database error: " + err });
-				};
-			});
-		})
-	};
-
-	var downloadController = new AbortController();
-
-	if (type == "opaque") {
-		return fetch(stream.url, { headers: { "range": "bytes=0-" }, mode: "no-cors", signal: downloadController.signal })
-		.then(function(response) {
-			assert(response.type == "opaque");
-			cacheObj.size = undefined;
-			cacheObj.progress = undefined;
-			// Add to cache
-			var cacheWrite = window.caches.open("flagplayer-media")
-			.then(function(cache) {
-				return cache.put(cacheObj.url, response);
-			})
-			.catch(() => {
-				downloadController.abort();
-				throw "download"; // Error here is equal to aborted
-			});
-			// TODO: Finish progress watch to be able to abort
-			var progressWatch = new Promise(async function(resolve, reject) {
-				while (true) {
-					if (download.status != "pending") return resolve();
-					if (progress && !progress(cacheObj.progress, cacheObj.size)) {
-						downloadController.abort();
-						return reject("aborted");
-					}
-					
-				}
-			});
-			return Promise.all([cacheWrite, progressWatch])
-			.catch(function(status) {
-				if (status == "download")
-					throw { message: "Opaque download/cache failed!" };
-				if (status == "aborted")
-					throw { message: "Aborted!" };
-				// Nothing else should happen
-			})
-			.then(() => updateCache(cacheObj));
-		});
-	} else {
-
-		var startStream;		
-		if (startByte) {
-			console.log("Decided to continue downloading from byte " + startByte + "/" + exCache.size);	
-			startStream = fetch(exCache.url)
-			.then(function(response) {
-				if (response.type == "opaque")
-					throw "Conflicting information, cache stream is opaque";
-				return response.body;
-			});
+		cacheObj.size = parseInt(response.headers.get("content-length"));
+		cacheObj.progress = 0;
+		if (progress && !progress(cacheObj.progress, cacheObj.size)) {
+			controller.abort();
+			return Promise.reject({ message: "Aborted!" });
 		}
-		else
-		{ // Dummy stream that can be read from once
-			startStream = new Promise (function() {
-				return new ReadableStream({
-					start(controller) {
-						controller.close();
-					}
-				});
-			});
-		}
+
+		// Split stream to cache and progress streams
+		var dataStreams = response.body.tee();
 		
-		var downloadStream = fetch(ct_pref.corsAPIHost + stream.url, 
-			{ headers: { "range": "bytes=" + startByte + "-" }, signal: downloadController.signal })
-		.then(function(response) {
-			if (response.type != "opaque")
-				return Promise.reject({ message: "Conflicting information, downloaded stream is opaque" });
-			if (!response.ok)
-				return Promise.reject(new NetworkError(response));
-	
-			cacheObj.size = parseInt(response.headers.get("content-length"));
-			cacheObj.progress = 0;
-			if (progress && !progress(cacheObj.progress, cacheObj.size)) {
-				downloadController.abort();
-				return Promise.reject({ message: "Aborted!" });
-			}
-	
-			// Split stream to cache and progress streams
-			return response.body;
-		});
-			
-
-		var cacheStream = new ReadableStream({
-			start(controller) {
-				const reader = startStream.getReader();
-				return pumpCached();
-				function pumpCached () {
-					return reader.read().then(({ done, value }) => {
-					if (done) return pumpDownload();
-					controller.enqueue(value);
-					return pumpCached();
-					});
-				}
-				function pumpDownload () {
-					return downloadStream.then(function(stream) {
-		
-						// Split stream to cache and progress streams
-						var dataStreams = stream.tee();
-						
-						// Add to cache
-						var downloader = new Promise(function(resolve, reject) {
-							const downloadReader = dataStreams[0].getReader();
-							return pump();
-							function pump() {
-								return downloadReader.read().then(({ done, value }) => {
-									if (done) return resolve();
-									controller.enqueue(value);
-									return pump();
-								});
-							}
-						}).catch((e) => {
-							console.error("Downloader error: ", e);
-							downloadController.abort();
-							throw e;
-						});
-
-						var progressWatch = new Promise(async function(resolve, reject) {
-							const reader = dataStreams[1].getReader();
-							while (true) {
-								const result = await reader.read();
-								if (result.done) return resolve("success");
-								cacheObj.progress += result.value.length;
-								updateCache(cacheObj, "downloading");
-								if (progress) {
-									var status = progress(cacheObj.progress, cacheObj.size);
-									if (status === false) {
-										downloadController.abort();
-										return reject("aborted");
-									}
-									if (status === 0) {
-										console.log("Interrupted, simulating cache/network error!");
-										downloadController.abort();
-										return reject("cache");
-									}
-								}
-							}
-						});
-				
-						return Promise.all([downloader, progressWatch])
-						.then(res => res[1]) // Only care about output from progressWatch
-						.catch(function(status) {
-							if (status == "aborted")
-								throw { message: "Aborted!" };
-							return status; // cache
-						})
-						.then((status) => updateCache(cacheObj, status));
-					});
-				}
-			},
-		});
-
-		// Write concatenated cache and download stream to cache
-		return window.caches.open("flagplayer-media")
+		// Add to cache
+		var cacheWrite = window.caches.open("flagplayer-media")
 		.then(function(cache) {
-			return cache.put(cacheObj.url, new Response(cacheStream, {
+			return cache.put(cacheObj.url, new Response(dataStreams[0], {
 				status: 200,
 				headers: {
 					"content-length": response.headers.get("content-length"),
 					"content-type": response.headers.get("content-type"),
 				},
 			}));
-		})
-		.catch((e) => {
-			console.error ("Complete cache error: ", e);
-			throw e;
 		});
 
-		return fetch(ct_pref.corsAPIHost + stream.url, 
-			{ headers: { "range": "bytes=" + startByte + "-" }, signal: downloadController.signal })
-		.then(function(response) {
-			assert(response.type != "opaque");
-			// Handle normal (non-opaque) response with progress indicator available
-	
-			if (!response.ok)
-				return Promise.reject(new NetworkError(response));
-	
-			cacheObj.size = parseInt(response.headers.get("content-length"));
-			cacheObj.progress = 0;
-			if (progress && !progress(cacheObj.progress, cacheObj.size)) {
-				downloadController.abort();
-				return Promise.reject({ message: "Aborted!" });
-			}
-	
-			// Split stream to cache and progress streams
-			var dataStreams = response.body.tee();
-			
-			// Add to cache
-			var cacheWrite = window.caches.open("flagplayer-media")
-			.then(function(cache) {
-				return cache.put(cacheObj.url, new Response(dataStreams[0], {
-					status: 200,
-					headers: {
-						"content-length": response.headers.get("content-length"),
-						"content-type": response.headers.get("content-type"),
-					},
-				}));
-			})
-			.catch(() => {
-				downloadController.abort();
-				throw "cache";
-			});
-	
-			var progressWatch = new Promise(async function(resolve, reject) {
-				const reader = dataStreams[1].getReader();
-				while (true) {
-					const result = await reader.read();
-					if (result.done) return resolve("success");
-					cacheObj.progress += result.value.length;
-					updateCache(cacheObj, "downloading");
-					if (progress) {
-						var status = progress(cacheObj.progress, cacheObj.size);
-						if (status === false) {
-							downloadController.abort();
-							return reject("aborted");
-						}
-						if (status === 0) {
-							console.log("Interrupted, simulating cache/network error!");
-							downloadController.abort();
-							return reject("cache");
-						}
-					}
+		var progressWatch = new Promise(async function(resolve, reject) {
+			const reader = dataStreams[1].getReader();
+			while (true) {
+				const result = await reader.read();
+				if (result.done) return resolve();
+				cacheObj.progress += result.value.length;
+				if (progress && !progress(cacheObj.progress, cacheObj.size)) {
+					controller.abort();
+					return reject({});
 				}
-			});
-	
-			return Promise.all([cacheWrite, progressWatch])
-			.then(res => res[1]) // Only care about output from progressWatch
-			.catch(function(status) {
-				if (status == "aborted")
-					throw { message: "Aborted!" };
-				return status; // cache
-			})
-			.then((status) => updateCache(cacheObj, status));
+			}
 		});
-	}
+
+		return Promise.all([cacheWrite, progressWatch])
+		.then(() => true)
+		.catch(function(err) {
+			console.error(err);
+		})
+		.then(function(success) {
+			db_access().then(function() {
+				var dbVideos = db_database.transaction("videos", "readwrite").objectStore("videos");
+				return new Promise (function (resolve, reject) {
+					dbVideos.get(cacheID).onsuccess = function (e) {
+						var cachedVideo = e.target.result || db_currentVideoAsCache();
+						cachedVideo.cache = cacheObj;
+						dbVideos.put(cachedVideo).onsuccess = function () { resolve(cacheObj); };
+						db_requestPersistence();
+					};
+				});
+			})
+			
+		})
+	});
 }
 function db_deleteCachedStream (cacheID) {
 	return window.caches.open("flagplayer-media")
-	.then (function(cache) {
+	.then (function (cache) {
 		var cacheWrite = cache.delete(VIRT_CACHE + cacheID);
-		var databaseWrite = db_access().then(function() {
+		var databaseWrite = db_access().then(function () {
 			var dbVideos = db_database.transaction("videos", "readwrite").objectStore("videos");
-			return new Promise (function(resolve, reject) {
-				dbVideos.get(cacheID).onsuccess = function(e) {
+			return new Promise (function (resolve, reject) {
+				dbVideos.get(cacheID).onsuccess = function (e) {
 					e.target.result.cache = undefined;
 					if (yt_video && yt_video.videoID == cacheID) yt_video.mediaCache = undefined;
 					dbVideos.put(e.target.result).onsuccess = resolve;
@@ -1901,7 +1674,7 @@ function yt_browse (subPath) {
 	}).then(function(response) {
 		if (!response.ok) return Promise.reject(new NetworkError(response));
 		return response.text()
-		.then (function(html) {
+		.then (function (html) {
 			var page = {};
 			page.html = html;
 			page.isDesktop = true;
@@ -1941,7 +1714,7 @@ function yt_browse (subPath) {
 			page.unavailable = !page.initialData || !page.initialData.contents;
 
 			// Whether YouTube thinks this is mobile - independant from ct_isDesktop, which is this apps opinion
-			//page.isDesktop = Object.keys(page.initialData.contents).some(function(s) { return s.startsWith("twoColumn"); });
+			//page.isDesktop = Object.keys(page.initialData.contents).some(function (s) { return s.startsWith("twoColumn"); });
 			
 			// Extract youtube secrets
 			page.secrets = {};
@@ -1997,7 +1770,7 @@ function yt_navigate (subPath, itctToken) {
 	}).then(function(response) {
 		if (!response.ok) return Promise.reject(new NetworkError(response));
 		return response.json()
-		.then (function(json) {
+		.then (function (json) {
 			yt_page.object = json;
 		
 			try { yt_page.initialData = yt_page.object[1]; 
@@ -2161,7 +1934,7 @@ function yt_parseFormattedRuns(runs) {
 	return text;
 }
 function yt_generateContinuationLoader(handleItems, api) {
-	var paged_req = function(data, pagedContent) {
+	var paged_req = function (data, pagedContent) {
 		return PAGED_REQUEST(data.continuation, api || "browse")
 		.then(function(pagedData) {
 			if (pagedContent?.aborted) return Promise.resolve();
@@ -2173,7 +1946,8 @@ function yt_generateContinuationLoader(handleItems, api) {
 				items = contents.contents;
 			} else { // Desktop
 				contents = pagedData.onResponseReceivedActions || pagedData.onResponseReceivedEndpoints || pagedData.onResponseReceivedCommands;
-				contents = contents?.[0]?.appendContinuationItemsAction;
+				if (contents)
+					contents = contents[0]?.appendContinuationItemsAction;
 				if (!contents)
 				{ // This does seem to work
 					data.continuation.itctToken = pagedData.trackingParams;
@@ -2221,7 +1995,7 @@ function yt_loadPlaylistData(listID, background) {
 	// Load page
 	return yt_browse ("/playlist?list=" + listID)
 	// Parse page
-	.then (function(page) {
+	.then (function (page) {
 		if (!background && playlist != yt_playlist)
 			return Promise.reject(); // Request has gone stale
 		if (!background) yt_page = page;
@@ -2240,7 +2014,7 @@ function yt_loadPlaylistData(listID, background) {
 		if (!background && yt_playlist == playlist)
 			ui_addToPlaylist(0);
 		// Setup continuous loading
-		var loadPage = yt_generateContinuationLoader(function(playlist, items) {
+		var loadPage = yt_generateContinuationLoader(function (playlist, items) {
 			newVideos = yt_parsePlaylistVideos(items);
 			playlist.videos = playlist.videos.concat(newVideos);
 			if (!background && yt_playlist == playlist)
@@ -2283,7 +2057,7 @@ function yt_extractPlaylistData(playlist, initialData) {
 		: HOST_YT_IMG + playlist.videos[0].videoID + '/default.jpg';
 }
 function yt_parsePlaylistVideos(itemList) {
-	return itemList.gather(function(v) {
+	return itemList.gather(function (v) {
 		v = v.playlistVideoRenderer;
 		if (!v) return undefined;
 		var available = v.shortBylineText != undefined;
@@ -2336,7 +2110,7 @@ function yt_loadSearchPage(searchTerms, background) {
 		if (!background && yt_searchResults == searchResults) {
 			ui_addSearchResults(0);
 			// Setup continuous loading
-			var handleResults = function(searchResults, items) {
+			var handleResults = function (searchResults, items) {
 				newResults = yt_parseSearchResults(items);
 				searchResults.results = searchResults.results.concat(newResults);
 				if (!background && yt_searchResults == searchResults)
@@ -2361,7 +2135,7 @@ function yt_loadSearchPage(searchTerms, background) {
 	});
 }
 function yt_parseSearchResults(itemList) {
-	return itemList.gather(function(i) {
+	return itemList.gather(function (i) {
 		// Discard:
 		// infoPanelContainerRenderer: Just a banner at the top (mobile)
 		// reelShelfRenderer: Side-scrolling short shelfs that go on for dozens of videos (mobile)
@@ -2424,7 +2198,7 @@ function yt_loadChannelData(id, background) {
 	// Load page
 	return yt_browse (channelURL)
 	// Parse and extract page information
-	.then (function(page) {
+	.then (function (page) {
 		if (!background && (ct_page != Page.Channel || yt_channel != channel))
 			return Promise.reject(); // Request has gone stale
 		if (!background) yt_page = page;
@@ -2467,14 +2241,14 @@ function yt_extractChannelUploads(initialData) {
 
 	// Postprocess tabs and start loading certain tab types
 	uploads.loadingTabs = [];
-	uploads.tabs.forEach (function(tab) {
+	uploads.tabs.forEach (function (tab) {
 		if (tab.continuation || tab.loadReady) {
 			// Already have initial videos and continuation
 			tab.loadReady = true;
 		}
 		else if (tab.browseContent) { // Setup browse loader
 			uploads.loadingTabs.push (yt_browse (tab.browseContent.startURL)
-			.then(function(page) {
+			.then(function (page) {
 				var tabContinuation = yt_extractChannelPageTabs(page.initialData)[0];
 				tab.continuation = tabContinuation.continuation;
 				tab.videos = tabContinuation.videos;
@@ -2484,7 +2258,7 @@ function yt_extractChannelUploads(initialData) {
 		}
 		else if (tab.listContent) { // Setup list loader
 			uploads.loadingTabs.push (yt_browse ("/playlist?list=" + tab.listContent.listID)
-			.then (function(page) {
+			.then (function (page) {
 				var tabs = page.initialData.contents.twoColumnBrowseResultsRenderer? 
 					page.initialData.contents.twoColumnBrowseResultsRenderer.tabs : 
 					page.initialData.contents.singleColumnBrowseResultsRenderer.tabs;
@@ -2503,7 +2277,7 @@ function yt_extractChannelUploads(initialData) {
 	});
 
 	// Clean up loading promises
-	Promise.all(uploads.loadingTabs).then (function() {
+	Promise.all(uploads.loadingTabs).then (function () {
 		uploads.loadingTabs = undefined;
 	});
 
@@ -2516,7 +2290,7 @@ function yt_extractChannelPageTabs (initialData) {
 	var videoTab = tabs.find(t => t.tabRenderer.selected == true).tabRenderer; // Language-indifferent - relies on /videos/ URL - could use title=="Videos"
 	
 	var tabs = [];
-	var handleContainer = function(tab, c) {
+	var handleContainer = function (tab, c) {
 		if (c.richGridRenderer) {
 			tab.title = "Uploads";
 			tab.continuation = yt_parseContinuationItem(c.richGridRenderer.contents);
@@ -2603,7 +2377,7 @@ function yt_extractChannelPageTabs (initialData) {
 	return tabs;
 }
 function yt_parseChannelVideos (itemList) {
-	return itemList.gather(function(v) {
+	return itemList.gather(function (v) {
 		v = v.richItemRenderer?.content || v;
 		v = v.videoRenderer || v.gridVideoRenderer || v.compactVideoRenderer;
 		if (!v) return undefined;
@@ -2630,7 +2404,7 @@ function yt_loadVideoData(id, background) {
 	// Load page
 	return yt_browse ("/watch?v=" + id)
 	// Parse page
-	.then (function(page) {
+	.then (function (page) {
 		if (!background && (ct_page != Page.Media || video != yt_video))
 			return Promise.reject(); // Request has gone stale
 		if (!background) yt_page = page;
@@ -2671,7 +2445,7 @@ function yt_loadVideoData(id, background) {
 		}
 	})
 	// Process video data
-	.then (function(page) {
+	.then (function (page) {
 		// Check age restriction
 		video.ageRestricted = page.html.indexOf("og:restrictions:age") != -1;
 		// Parse player response
@@ -2715,10 +2489,10 @@ function yt_loadVideoData(id, background) {
 			video.comments = yt_extractVideoCommentData(page.initialData);
 			// Extract and decode stream data
 			return yt_decodeStreams(page.config)
-			.then (function(streams) {
+			.then (function (streams) {
 				video.streams = streams;
 				return page;
-			}).catch (function(error) {
+			}).catch (function (error) {
 				console.error("Failed to load streams: " + error);
 				video.streams = [];
 				return page;
@@ -2729,7 +2503,7 @@ function yt_loadVideoData(id, background) {
 			return page;
 		}
 	})
-	.then (function(page) {
+	.then (function (page) {
 		return { video: video, page: page };
 	});
 }
@@ -2887,7 +2661,7 @@ function yt_loadMoreRelatedVideos (related, pagedContent) {
 	}, "next")(related, pagedContent);
 }
 function yt_parseRelatedVideos (itemList) {
-	return itemList.gather(function(v) {
+	return itemList.gather(function (v) {
 			if (v.compactAutoplayRenderer)
 				v = v.compactAutoplayRenderer.contents.extract(c => c.videoWithContextRenderer || c.compactVideoRenderer);
 			else
@@ -3024,7 +2798,7 @@ function yt_loadMoreComments (commentData, pagedContent) {
 	if (!commentData.continuation)
 		return Promise.resolve(false);
 	return PAGED_REQUEST(commentData.continuation, "next")
-	.then(function(data) {
+	.then(function (data) {
 		if (pagedContent?.aborted) return Promise.resolve();
 		yt_video.comments.lastPage = data;
 
@@ -3062,7 +2836,7 @@ function yt_extractVideoCommentObject (commentData, comments, response) {
 
 	if (contents.length > 0) {
 		try { // Extract comments
-			contents.forEach(function(c) {
+			contents.forEach(function (c) {
 				var thread, comm;
 				if (c.commentThreadRenderer) {
 					thread = c.commentThreadRenderer;
@@ -3143,7 +2917,7 @@ function splice (arr, b) { arr.splice(0,b); }
 function swap (arr, b) { var a = arr[0]; arr[0] = arr[b%arr.length]; arr[b%arr.length] = a; }
 
 function yt_decodeStreams (config) {
-	var parseStreams = function(streamData) {
+	var parseStreams = function (streamData) {
 		var stream = {};
 		var params = streamData.split('&');
 		for (var i = 0; i < params.length; i++) {
@@ -3162,7 +2936,7 @@ function yt_decodeStreams (config) {
 		adaptiveStreams = adaptiveStreams.concat(config.args.adaptive_fmts.split(',').map(parseStreams));
 	var streams = (legacyStreams || []).concat(adaptiveStreams || []);
 	// Get sign function if required (async in case it's not yet cached)
-	return new Promise (function(resolve, reject) {
+	return new Promise (function (resolve, reject) {
 		var jsID = config.assets.js;
 		var signCache = G("jscache" + jsID);
 		if (signCache) { // Use cached signing transformation
@@ -3205,15 +2979,15 @@ function yt_decodeStreams (config) {
 	})
 
 	// Decipher streams by applying the sign function if required
-	.then(function(transformPlan) {
+	.then(function (transformPlan) {
 		// Sign any stream urls that are yet unsigned
 		// s is unsigned cipher to sign, url requires signature, sp is parameter name to assign the signature to
 		for (var i = 0; i < streams.length; i++) {
 			var stream = streams[i];
 			if (stream.cipher) // Encoded on mobile: s, url, sp
-				new URLSearchParams (stream.cipher).forEach(function(v, n) { stream[n] = v; });
+				new URLSearchParams (stream.cipher).forEach(function (v, n) { stream[n] = v; });
 			if (stream.signatureCipher) // Encoded on some desktop videos: s, url, sp
-				new URLSearchParams (stream.signatureCipher).forEach(function(v, n) { stream[n] = v; });
+				new URLSearchParams (stream.signatureCipher).forEach(function (v, n) { stream[n] = v; });
 			if (stream.s) {
 				var arr = stream.s.split('');
 				for (var j = 0; j < transformPlan.length; j++) { 
@@ -3236,7 +3010,7 @@ function yt_decodeStreams (config) {
 	})
 
 	// Process streams into unified format (discarding some information)
-	.then(function() {
+	.then(function () {
 		for (var i = 0; i < streams.length; i++) {
 			// Copy and process data into new stream object
 			var s = streams[i];
@@ -3523,7 +3297,7 @@ function ui_shortenBytes (num) {
 function ui_shortenNumber (num, bmk) {
 	if (num == undefined) return "---";
 	if (!bmk) bmk = "BMK";
-	var p = function(from, to) { return ((num - num%Math.pow(10,from)) - (num - num%Math.pow(10,to || from+3))) / Math.pow(10,from); }
+	var p = function (from, to) { return ((num - num%Math.pow(10,from)) - (num - num%Math.pow(10,to || from+3))) / Math.pow(10,from); }
 	if (num >= 1000000000) return p(9) + "," + p(7,8) + bmk[0];
 	if (num >= 10000000) return p(6,9) + bmk[1];
 	if (num >= 1000000) return p(6,9) + "," + p(5,6) + bmk[1];
@@ -3533,7 +3307,7 @@ function ui_shortenNumber (num, bmk) {
 }
 function ui_formatNumber (num) {
 	if (num == undefined) return "---"
-	var p = function(from, to) { 
+	var p = function (from, to) { 
 		var n = "" + ((num - num%Math.pow(10,from)) - (num - num%Math.pow(10,to || from+3))) / Math.pow(10,from);
 		while (to && n.length < to-from) n = "0" + n;
 		return n;
@@ -3613,10 +3387,10 @@ function ui_closeSettings () {
 function ui_setupHome () {
 	if (ct_page != Page.Home) return;
 	var playlistContainer = I("homePlaylists");
-	db_accessPlaylists().then(function() {
+	db_accessPlaylists().then(function () {
 		if (db_playlists.length > 0) {
 			playlistContainer.innerHTML = "";
-			db_playlists.forEach(function(pl) {
+			db_playlists.forEach(function (pl) {
 				ht_appendPlaylistElement(playlistContainer, pl.listID, pl.thumbnailURL || (HOST_YT_IMG + pl.thumbID + '/default.jpg'), pl.title, (pl.author.name || pl.author || "Autogenerated"), pl.count + " videos");
 			});
 		} // Else just leave the introduction
@@ -3659,7 +3433,7 @@ function ui_setupCache () {
 	}
 	var cachedVideoList = I("cacheVideoList");
 	cachedVideoList.innerHTML = "";
-	db_cachedVideos.forEach(function(v) {
+	db_cachedVideos.forEach(function (v) {
 		ht_appendVideoElement(cachedVideoList, undefined, v.videoID, ui_formatTimeText(v.length), v.title, v.uploader.name, v.cache.quality + "Kbps (" + ui_shortenBytes(v.cache.size) + ")", {
 			class: "cacheVideoContext",
 			entries: ['<span tabindex="0" value="cacheDelete-' + v.videoID + '">Delete Cache</span>'],
@@ -3667,7 +3441,7 @@ function ui_setupCache () {
 	});
 	ui_setupDropdowns();
 	var cacheContext = document.getElementsByClassName("cacheVideoContext");
-	[].forEach.call(cacheContext, function(d) {
+	[].forEach.call(cacheContext, function (d) {
 		d.onchange = onSelectContextAction;
 	});
 	sec_cache.style.display = "block";
@@ -3741,7 +3515,7 @@ function ui_setVideoMetadata() {
 		I("vdSentiment").parentElement.style.display = "none";
 	}
 	var uploaderNav = yt_video.meta.uploader.userID? ("u=" + yt_video.meta.uploader.userID) : (yt_video.meta.uploader.channelName? ("c=" + yt_video.meta.uploader.channelName) : ("ch=" + yt_video.meta.uploader.channelID));
-	[].forEach.call(document.getElementsByClassName("vdUploadLink"), function(link) {
+	[].forEach.call(document.getElementsByClassName("vdUploadLink"), function (link) {
 		link.setAttribute("navigation", uploaderNav);
 		link.href = ct_getNavLink(uploaderNav);
 	});
@@ -3832,7 +3606,7 @@ function ui_updateRelatedVideos () {
 		} else {
 			sec_related.style.display = "block";
 			var videoContainer = I("relatedContainer");
-			[].forEach.call(videoContainer.children, function(c) {
+			[].forEach.call(videoContainer.children, function (c) {
 				var filtered = false;
 				// TODO
 				c.style.display = ct_pref.relatedVideos == "ALL" && !filtered? "" : "none";
@@ -3912,7 +3686,7 @@ function ui_addSearchResults (startIndex) {
 function ui_updateSearchResults () {
 	if (ct_page != Page.Search || !yt_searchResults) return;
 	var videoContainer = I("searchContainer");
-	[].forEach.call(videoContainer.children, function(c) {
+	[].forEach.call(videoContainer.children, function (c) {
 		var videoID = c.getAttribute("videoID");
 		var video = yt_searchResults.results.find(v => v.videoID == videoID);
 		var filtered = !video || ct_pref.filterCategories.includes(video.categoryID);
@@ -3926,7 +3700,7 @@ function ui_resetSearch () {
 }
 function ui_setSearchError (error) {
 	sec_search.style.display = "block";
-	I("searchContainer").innerHTML = error.name + " while loading Search Page: " + error.message;
+	I("searchContainer").innerHTML = error.name + " while loading Search Page: " + (error.status || error.message);
 }
 
 
@@ -3973,7 +3747,7 @@ function ui_setupChannelTabs () {
 		tabBar.style.display = "none";
 	} else {
 		ht_appendTabHeader(tabBar, "Overview", "overview").setAttribute("selected", "");
-		yt_channel.uploads.tabs.forEach (function(tab) {
+		yt_channel.uploads.tabs.forEach (function (tab) {
 			tab.tabHeader = ht_appendTabHeader(tabBar, tab.title, tab.id);
 			tab.section = ht_appendFullVideoSection(container, undefined, tab.id, tab.listContent? tab.listContent.listID : undefined);
 			tab.section.style.display = "none";
@@ -3997,7 +3771,7 @@ function ui_fillChannelTab (tab) {
 		ui_addChannelUploads(tab.container, tab.videos, 0);
 	// Setup Loader
 	// TODO: This rarely loads the first set of videos that was already parsed again
-	var loader = yt_generateContinuationLoader(function(tab, itemList) {
+	var loader = yt_generateContinuationLoader(function (tab, itemList) {
 		newVideos = yt_parseChannelVideos(itemList);
 		tab.videos = tab.videos.concat(newVideos);
 		ui_addChannelUploads(tab.container, tab.videos, tab.videos.length-newVideos.length)
@@ -4030,7 +3804,7 @@ function ui_resetChannelUploads () {
 	I("chVideoContainer").innerHTML = "";
 }
 function ui_setChannelError (error) {
-	I("chVideoContainer").innerHTML = error.name + " while loading Channel Page: " + error.message;
+	I("chVideoContainer").innerHTML = error.name + " while loading Channel Page: " + (error.status || error.message);
 }
 
 
@@ -4069,12 +3843,12 @@ function ui_addToPlaylist (startIndex) {
 	}
 	sec_playlist.style.display = "";
 	if (focusIndex != undefined) ui_setPlaylistPosition (focusIndex);
-	ht_playlistVideos.onscroll = function() {
+	ht_playlistVideos.onscroll = function () {
 		ui_plScrollPos = ht_playlistVideos.scrollTop;
 		ui_plScrollDirty = false;
 		ui_checkPlaylist();
 	};
-	sec_playlist.onCollapse = function(collapsed) { // Triggered by collapser
+	sec_playlist.onCollapse = function (collapsed) { // Triggered by collapser
 		if (!collapsed) {
 			if (ui_plScrollDirty)
 				ht_playlistVideos.scrollTop = ui_plScrollPos;
@@ -4104,10 +3878,10 @@ function ui_checkPlaylist () {
 	if (!yt_playlist) return; // Unloaded
 	if (sec_playlist.hasAttribute("collapsed")) return; // Collapsed
 	ui_adaptiveListLoad(ht_playlistVideos, yt_playlist.videos.length, ui_plScrollPos, 60, window.innerHeight * 1.5,
-	function(index) {
+	function (index) {
 		var video = yt_playlist.videos[index];
 		ht_fillVideoPlaceholder(ht_playlistVideos.children[index], index+1, video.videoID, video.title, video.uploader.name, ui_formatTimeText(video.length));
-	}, function(index) {
+	}, function (index) {
 		var video = yt_playlist.videos[index];
 		ht_clearVideoPlaceholder(ht_playlistVideos.children[index], video.title, video.uploader.name);
 	});
@@ -4233,7 +4007,7 @@ function ui_addLoadingIndicator (container, inside) {
 function ui_removeLoadingIndicator (container) {
 	while (container.nextSibling && container.nextSibling.className && container.nextSibling.className.toString().includes("loadingIndicator"))
 		container.parentElement.removeChild(container.nextSibling);
-	[].forEach.call(container.getElementsByClassName("loadingIndicator"), function(l) { container.removeChild(l); });
+	[].forEach.call(container.getElementsByClassName("loadingIndicator"), function (l) { container.removeChild(l); });
 }
 function ui_addDropdownElement (dropdown, value, label) {
 	var opt = document.createElement("option");
@@ -4251,15 +4025,15 @@ function ui_addDropdownElementCustom (dropdown, value, label) {
 }
 function ui_setupDropdowns () {
 	var scriptDropdowns = document.getElementsByClassName("dropdown script");
-	[].forEach.call(scriptDropdowns, function(d) {
+	[].forEach.call(scriptDropdowns, function (d) {
 		d.container = d.getElementsByClassName("dropdownContent")[0];
 		d.options = d.container.children;
-		d.getOptions = function() { return [].slice.call(d.options); }
-		d.getSelected = function() { return [].filter.call(d.options, o => o.selected, 0); }
-		d.getUnselected = function() { return [].filter.call(d.options, o => !o.selected, 0); }
-		d.countSelected = function() { return [].reduce.call(d.options, (c, o) => c + (o.selected? 1 : 0), 0); }
-		d.countUnselected = function() { return [].reduce.call(d.options, (c, o) => c + (!o.selected? 1 : 0), 0); }
-		var handler = function(event) { ui_handleDropdown(d, event); };
+		d.getOptions = function () { return [].slice.call(d.options); }
+		d.getSelected = function () { return [].filter.call(d.options, o => o.selected, 0); }
+		d.getUnselected = function () { return [].filter.call(d.options, o => !o.selected, 0); }
+		d.countSelected = function () { return [].reduce.call(d.options, (c, o) => c + (o.selected? 1 : 0), 0); }
+		d.countUnselected = function () { return [].reduce.call(d.options, (c, o) => c + (!o.selected? 1 : 0), 0); }
+		var handler = function (event) { ui_handleDropdown(d, event); };
 		d.onclick = handler;
 		d.addEventListener("blur", handler, true);
 	});
@@ -4376,7 +4150,7 @@ function ui_handleDropdown (dropdown, event) {
 		}
 		// Show and update dropdown
 		dropdown.setAttribute("toggled", "");
-		[].forEach.call(dropdown.options, function(c) {
+		[].forEach.call(dropdown.options, function (c) {
 			if (c.selected) c.setAttribute("selected", "");
 			else c.removeAttribute("selected");
 		});
@@ -4524,7 +4298,7 @@ function ui_setupEventHandlers () {
 	
 	/* Button Handlers */
 	// Header
-	I("searchField").onkeyup = function(event) { if (event.key == 'Enter') onSearchGo() };
+	I("searchField").onkeyup = function (event) { if (event.key == 'Enter') onSearchGo() };
 	I("searchButton").onclick = onSearchGo;
 	I("settingsOpenButton").onclick = onSettingsToggle;
 	I("settingsCloseButton").onclick = onSettingsToggle;
@@ -4542,25 +4316,25 @@ function ui_setupEventHandlers () {
 	I("plUpdate").onclick = ct_updatePlaylist;
 	I("plClose").onclick = ct_resetPlaylist;
 	// Options Panel
-	I("select_legacy").onchange = function() { onOptionsChange("ST"); };
-	I("select_dashContainer").onchange = function() { onOptionsChange("ST"); };
-	I("select_dashVideo").onchange = function() { onOptionsChange("ST"); };
-	I("select_dashAudio").onchange = function() { onOptionsChange("ST"); };
-	I("opt_loop").onchange = function() { onOptionsChange("LP"); };
-	I("opt_autoplay").onchange = function() { onOptionsChange("AP"); };
-	I("opt_plshuffle").onchange = function() { onOptionsChange("PS"); };
+	I("select_legacy").onchange = function () { onOptionsChange("ST"); };
+	I("select_dashContainer").onchange = function () { onOptionsChange("ST"); };
+	I("select_dashVideo").onchange = function () { onOptionsChange("ST"); };
+	I("select_dashAudio").onchange = function () { onOptionsChange("ST"); };
+	I("opt_loop").onchange = function () { onOptionsChange("LP"); };
+	I("opt_autoplay").onchange = function () { onOptionsChange("AP"); };
+	I("opt_plshuffle").onchange = function () { onOptionsChange("PS"); };
 	// Settings Panel
-	I("st_theme").onchange = function() { onSettingsChange("TH"); };
-	I("st_related").onchange = function() { onSettingsChange("RV"); };
-	//I("st_filter_categories").onchange = function() { onSettingsChange("FV"); };
-	//I("st_filter_hide").onchange = function() { onSettingsChange("FV"); };
-	I("st_comments").onchange = function() { onSettingsChange("CM"); };
-	I("st_corsHost").onchange = function() { onSettingsChange("CH"); };
-	I("st_cache_quality").onchange = function() { onSettingsChange("CC"); };
-	I("st_cache_force").onchange = function() { onSettingsChange("CC"); };
-	I("st_small_player").onchange = function() { onSettingsChange("SP"); };
+	I("st_theme").onchange = function () { onSettingsChange("TH"); };
+	I("st_related").onchange = function () { onSettingsChange("RV"); };
+	//I("st_filter_categories").onchange = function () { onSettingsChange("FV"); };
+	//I("st_filter_hide").onchange = function () { onSettingsChange("FV"); };
+	I("st_comments").onchange = function () { onSettingsChange("CM"); };
+	I("st_corsHost").onchange = function () { onSettingsChange("CH"); };
+	I("st_cache_quality").onchange = function () { onSettingsChange("CC"); };
+	I("st_cache_force").onchange = function () { onSettingsChange("CC"); };
+	I("st_small_player").onchange = function () { onSettingsChange("SP"); };
 	// Cache
-	I("cacheFixButton").onclick = function() { db_fixCache() };
+	I("cacheFixButton").onclick = function () { db_fixCache() };
 	// Context
 	I("videoContextActions").onchange = onSelectContextAction;
 	I("commentContextActions").onchange = onSelectContextAction;
@@ -4639,11 +4413,10 @@ function onSettingsChange (hint) {
 	switch (hint) {
 		case "CH":
 			ct_pref.corsAPIHost = I("st_corsHost").value;
-			if (!ct_pref.corsAPIHost)
-				ct_pref.corsAPIHost = HOST_CORS;
-			if (!ct_pref.corsAPIHost.endsWith('/'))
+			if (!ct_pref.corsAPIHost.endsWith('/')) {
 				ct_pref.corsAPIHost += '/';
-			I("st_corsHost").value = ct_pref.corsAPIHost;
+				I("st_corsHost").value += '/';
+			}
 			break;
 		case "FV":
 			ct_pref.filterHideCompletely = I("st_filter_hide").checked;
@@ -4761,22 +4534,22 @@ function onLoadReplies (container, commentID) {
 	loader.style.display = "none";
 }
 function onToggleButton (button, callback) {
-	button.onclick = function() {
+	button.onclick = function () {
 		var toggled = button.toggleAttr("toggled");
 		if (callback) callback(toggled);
 	}
 }
 function onBrowseTab (tabID) {
-	[].forEach.call(I("chTabBar").children, function(header) { header.removeAttribute("selected"); });
+	[].forEach.call(I("chTabBar").children, function (header) { header.removeAttribute("selected"); });
 	if (tabID == "overview") {
-		yt_channel.uploads.tabs.forEach(function(tab) {
+		yt_channel.uploads.tabs.forEach(function (tab) {
 			tab.section.style.display = "none";
 			if (tab.smallSection) tab.smallSection.style.display = "block";
 		});
 		I("h-overview").setAttribute("selected", "");
 	} else {
 		var selectedTab = yt_channel.uploads.tabs.find(t => t.id == tabID);
-		yt_channel.uploads.tabs.forEach(function(tab) {
+		yt_channel.uploads.tabs.forEach(function (tab) {
 			tab.section.style.display = "none";
 			if (tab.smallSection) tab.smallSection.style.display = "none";
 		});
@@ -4866,7 +4639,7 @@ function onMouseClick (mouse) {
 	if (target = ui_hasCascadedClass(mouse.target, "contentLoader", 2)) {
 		var container = target.parentElement.className.includes("contentContainer")? target.parentElement 
 				: target.parentElement.getElementsByClassName("contentContainer")[0];
-		new Function("container", target.getAttribute("load-content"))(container);
+		new Function ("container", target.getAttribute("load-content"))(container);
 		container.setAttribute("loaded", "");
 		if (target.className.includes("collapser")) // Only act as collapser from now on
 			target.classList.remove("contentLoader");
@@ -5086,7 +4859,7 @@ function md_updateStreams ()  {
 		md_sources = undefined;
 		return;
 	}
-	var loadStream = function(media, source)  {
+	var loadStream = function (media, source)  {
 		media.src = source;
 		media.currentTime = md_curTime;
 		media.load();
@@ -5240,7 +5013,7 @@ function md_checkBuffering(forceBuffer) {
 	}
 }
 function md_getBufferedAhead () {
-	var getBuffered = function(buffered, time) {
+	var getBuffered = function (buffered, time) {
 		for (var i = 0; i < buffered.length && buffered.start(i) <= time; i++);
 		return Math.abs(i == 0? 0 : buffered.end(i-1));
 	}
@@ -5251,7 +5024,7 @@ function md_getBufferedAhead () {
 	return buffered - md_curTime;
 }
 function md_getBufferedMax () {
-	var getBuffered = function(buffered) {
+	var getBuffered = function (buffered) {
 		return buffered.length == 0? 0 : buffered.end(buffered.length-1);
 	}
 	if (!md_sources) return 0;
@@ -5336,7 +5109,7 @@ function md_forceStartMedia() {
 function md_assureBuffer () {
 	clearTimeout(md_timerCheckBuffering);
 	var bufferedAhead = md_getBufferedAhead();
-	md_timerCheckBuffering = setTimeout(function() {
+	md_timerCheckBuffering = setTimeout(function () {
 		if (md_state == State.Started && !md_flags.buffering)
 			md_checkBuffering();
 	}, (bufferedAhead-1)*1000);
@@ -5344,7 +5117,7 @@ function md_assureBuffer () {
 function md_assureSync () {
 	clearTimeout(md_timerSyncMedia);
 	if (md_sources && md_sources.video && md_sources.audio && !md_attemptPlayStarted) {
-		var syncTimes = function(syncSignificance) {
+		var syncTimes = function (syncSignificance) {
 			if (md_sources && md_sources.video && md_sources.audio && !md_attemptPlayStarted) {
 				if (md_isPlaying()) {
 					var timeDiff = audioMedia.currentTime-videoMedia.currentTime;
@@ -5379,27 +5152,30 @@ function md_assureSync () {
 
 class ParseError extends Error {
 	constructor (code, message, minor, object) {
-		super(message || "No message");
+		super("");
+		this.status = message;
 		this.name = "Parse Error";
-		this.code = code || -1;
+		this.code = code;
 		this.minor = minor || false;
 		this.object = object;
 	}
 }
 class PlaybackError extends Error {
 	constructor (code, message, minor, tag) {
-		super(message || "No message");
+		super("");
+		this.status = message;
 		this.name = "Playback Error";
-		this.code = code || -1;
+		this.code = code;
 		this.minor = minor;
 		this.tag = tag;
 	}
 }
 class NetworkError extends Error {
 	constructor (response, message, code) {
-		super(message || response?.statusText || "No message");
+		super("");
+		this.status = response? response.statusText : message;
 		this.name = "Network Error";
-		this.code = code || response?.status || -1;
+		this.code = response? response.status : code;
 	}
 }
 
@@ -5413,7 +5189,7 @@ function PAGED_REQUEST (data, api) {
 				clickTrackingParams: data.itctToken
 			}
 		}
-	}).then(function(response) {
+	}).then(function (response) {
 		return response.json();
 	});
 }
@@ -5442,7 +5218,7 @@ function AJAX_REQUEST (url, method, authenticate) {
 			yt_getRequestHeadersYoutube("application/x-www-form-urlencoded", true) : 
 			yt_getRequestHeadersBrowser(false),
 		body: authenticate? "session_token=" + encodeURIComponent(yt_page.secrets.xsrfToken) : undefined,
-	}).then(function(response) {
+	}).then(function (response) {
 		return response.text();
 	});
 }
