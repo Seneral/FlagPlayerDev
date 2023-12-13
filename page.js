@@ -717,7 +717,7 @@ function ct_cacheVideo(video) {
 		var not = ui_setNotification(notID, "Caching " + videoID + ": " + (cache.size? ui_shortenBytes(cache.size) : "Done, unknown size") + " - " +
 			'<button>View Cache</button>', 3000);
 		not.notContent.children[0].onclick = function() { not.notClose(); ct_navCache(); };
-		video.cache = cache;
+		video.mediaCache = cache;
 		// In case current view is cache, update the view
 		db_getCachedVideos().then(ui_setupCache);
 	}).catch(function(e) {
@@ -1060,6 +1060,7 @@ function ct_mediaError (error) {
 		});
 		ui_setNotification("vd-" + yt_videoID, 'Cache of ' + yt_videoID + ' is invalid, removed entry!', 5000);*/
 		console.error("Cached media file erroneous! Ignoring. ", error);
+		//yt_video.mediaCache = undefined;
 		md_resetStreams();
 		ui_setNotification("vd-" + yt_videoID, 'Cache of "' + (yt_video && yt_video.meta? yt_video.meta.title : "") + '"' + yt_videoID + ' seems to be invalid!', 5000);
 		return;
@@ -1602,21 +1603,16 @@ function db_cacheStream (video, type, progress) {
 				var getVidReq = dbVideos.get(cacheID);
 				getVidReq.onsuccess = function(e) {
 					var cachedVideo = e.target.result || db_videoAsCache(video);
+					if (mediaCache.size == 0)
+						mediaCache.status = "opaque";
+					if (mediaCache.progress < mediaCache.size)
+						mediaCache.status = "partial" + (status? " - " + status : "");
+					if (mediaCache.progress == mediaCache.size)
+						mediaCache.status = "complete";
 					cachedVideo.cache = mediaCache;
 					var setVidReq = dbVideos.put(cachedVideo);
 					setVidReq.onsuccess = function() {
-						if (mediaCache.size == 0) {
-							mediaCache.status = "opaque";
-							resolve(mediaCache);
-						}
-						if (mediaCache.progress < mediaCache.size) {
-							mediaCache.status = "partial" + (status? " - " + status : "");
-							reject(mediaCache);
-						}
-						if (mediaCache.progress == mediaCache.size) {
-							mediaCache.status = "complete";
-							resolve(mediaCache);
-						}
+						resolve(mediaCache);
 					};
 					setVidReq.onerror = function(err) {
 						reject({ message: "Database error: " + err });
@@ -1682,24 +1678,25 @@ function db_cacheStream (video, type, progress) {
 		}
 		else
 		{ // Dummy stream that can be read from once
-			startStream = new Promise (function() {
-				return new ReadableStream({
+			startStream = new Promise (function(resolve) {
+				resolve(new ReadableStream({
 					start(controller) {
 						controller.close();
 					}
-				});
+				}));
 			});
 		}
 		
 		var downloadStream = fetch(ct_pref.corsAPIHost + stream.url, 
 			{ headers: { "range": "bytes=" + startByte + "-" }, signal: downloadController.signal })
 		.then(function(response) {
-			if (response.type != "opaque")
+			if (response.type == "opaque")
 				return Promise.reject({ message: "Conflicting information, downloaded stream is opaque" });
 			if (!response.ok)
 				return Promise.reject(new NetworkError(response));
 	
 			cacheObj.size = parseInt(response.headers.get("content-length"));
+			cacheObj.contentType = response.headers.get("content-type");
 			cacheObj.progress = startByte;
 			if (progress && !progress(cacheObj.progress, cacheObj.size)) {
 				downloadController.abort();
@@ -1710,11 +1707,11 @@ function db_cacheStream (video, type, progress) {
 			return response.body;
 		});
 
-
-		var cacheStream = new ReadableStream({
-			start(controller) {
-				return startStream.then(function(stream) {
-					const reader = stream.getReader();
+		return Promise.all([startStream, downloadStream])
+		.then(function (streams) {
+			return new ReadableStream({
+				start(controller) {
+					const reader = streams[0].getReader();
 					return pumpCached();
 					function pumpCached () {
 						return reader.read().then(({ done, value }) => {
@@ -1723,12 +1720,9 @@ function db_cacheStream (video, type, progress) {
 							return pumpCached();
 						});
 					}
-				});
-				function pumpDownload () {
-					return downloadStream.then(function(stream) {
-		
+					function pumpDownload () {
 						// Split stream to cache and progress streams
-						var dataStreams = stream.tee();
+						var dataStreams = streams[1].tee();
 						
 						// Add to cache
 						var downloader = new Promise(function(resolve, reject) {
@@ -1751,9 +1745,12 @@ function db_cacheStream (video, type, progress) {
 							const reader = dataStreams[1].getReader();
 							while (true) {
 								const result = await reader.read();
-								cacheObj.progress += result.value.length;
 								if (result.done) return resolve("success");
-								updateCache(cacheObj, "downloading");
+								cacheObj.progress += result.value.length;
+								updateCache(cacheObj, "downloading")
+								.catch(function(status) {
+									console.error("Couldn't update cache!");
+								});
 								if (progress) {
 									var status = progress(cacheObj.progress, cacheObj.size);
 									if (status === false) {
@@ -1776,27 +1773,31 @@ function db_cacheStream (video, type, progress) {
 								throw { message: "Aborted!" };
 							return status; // cache
 						})
-						.then((status) => updateCache(cacheObj, status));
-					});
-				}
-			},
-		});
-
-		// Write concatenated cache and download stream to cache
-		return window.caches.open("flagplayer-media")
-		.then(function(cache) {
-			return cache.put(cacheObj.url, new Response(cacheStream, {
-				status: 200,
-				headers: {
-					"content-length": response.headers.get("content-length"),
-					"content-type": response.headers.get("content-type"),
+						.then(function (status) {
+							updateCache(cacheObj, status)
+							.then(() => controller.close());
+						});
+					}
 				},
-			}));
+			});
+		})
+		.then(function (cacheStream) {
+			return window.caches.open("flagplayer-media")
+			.then(function(cache) {
+				return cache.put(cacheObj.url, new Response(cacheStream, {
+					status: 200,
+					headers: {
+						"content-length": cacheObj.size,
+						"content-type": cacheObj.contentType,
+					},
+				}))
+				.then(() => cacheObj);
+			});
 		})
 		.catch((e) => {
 			console.error ("Complete cache error: ", e);
 			throw e;
-		});
+		};
 	}
 }
 function db_deleteCachedStream (cacheID) {
