@@ -1587,7 +1587,6 @@ function db_cacheStream (video, type, progress) {
 		itag: stream.itag,
 	};
 
-	console.log("Planning to download itag " + stream.itag);
 	if (exCache)
 		console.log("Found existing cache information of itag " + exCache.itag + ", downloaded " + exCache.progress + "/" + exCache.size);
 
@@ -1612,7 +1611,8 @@ function db_cacheStream (video, type, progress) {
 					setVidReq.onerror = function (err) {
 						reject({ message: "Database error: " + err });
 					};
-					db_requestPersistence();
+					if (mediaCache.progress == mediaCache.size || mediaCache.progress == 0)
+						db_requestPersistence();
 				};
 				getVidReq.onerror = function (err) {
 					reject({ message: "Database error: " + err });
@@ -1690,9 +1690,9 @@ function db_cacheStream (video, type, progress) {
 			if (!response.ok)
 				return Promise.reject(new NetworkError(response));
 	
-			cacheObj.size = parseInt(response.headers.get("content-length"));
-			cacheObj.contentType = response.headers.get("content-type");
 			cacheObj.progress = startByte;
+			cacheObj.size = startByte + parseInt(response.headers.get("content-length"));
+			cacheObj.contentType = response.headers.get("content-type");
 			if (progress && !progress(cacheObj.progress, cacheObj.size)) {
 				downloadController.abort();
 				return Promise.reject({ message: "Aborted!" });
@@ -1748,16 +1748,10 @@ function db_cacheStream (video, type, progress) {
 								});
 								if (progress) {
 									var status = progress(cacheObj.progress, cacheObj.size);
-									if (status === false) {
+									if (!status) {
 										downloadController.abort();
 										return reject("aborted");
-									}
-									if (status === 0) {
-										console.log("Interrupted, simulating cache/network error!");
-										downloadController.abort();
-										return reject("cache");
-									}
-								}
+									}								}
 							}
 						});
 				
