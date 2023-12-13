@@ -1639,14 +1639,13 @@ function db_cacheStream (video, type, progress) {
 				throw "download"; // Error here is equal to aborted
 			});
 			// TODO: Finish progress watch to be able to abort
-			var progressWatch = new Promise(async function (resolve, reject) {
+			var progressWatch = new Promise(function (resolve, reject) {
 				while (true) {
 					if (download.status != "pending") return resolve();
 					if (progress && !progress(cacheObj.progress, cacheObj.size)) {
 						downloadController.abort();
 						return reject("aborted");
 					}
-					
 				}
 			});
 			return Promise.all([cacheWrite, progressWatch])
@@ -1736,22 +1735,26 @@ function db_cacheStream (video, type, progress) {
 							throw e;
 						});
 
-						var progressWatch = new Promise(async function (resolve, reject) {
+						var progressWatch = new Promise(function (resolve, reject) {
 							const reader = dataStreams[1].getReader();
-							while (true) {
-								const result = await reader.read();
-								if (result.done) return resolve("success");
-								cacheObj.progress += result.value.length;
-								updateCache(cacheObj, "downloading")
-								.catch(function (status) {
-									console.error("Couldn't update cache!");
+							return pump();
+							function pump() {
+								return reader.read().then(({ done, value }) => {
+									if (done) return resolve("success");
+									cacheObj.progress += value.length;
+									updateCache(cacheObj, "downloading")
+									.catch(function () {
+										console.error("Couldn't update cache!");
+									});
+									if (progress) {
+										var status = progress(cacheObj.progress, cacheObj.size);
+										if (!status) {
+											downloadController.abort();
+											return reject("aborted");
+										}
+									}
+									return pump();
 								});
-								if (progress) {
-									var status = progress(cacheObj.progress, cacheObj.size);
-									if (!status) {
-										downloadController.abort();
-										return reject("aborted");
-									}								}
 							}
 						});
 				
