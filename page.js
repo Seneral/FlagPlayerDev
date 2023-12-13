@@ -1723,7 +1723,7 @@ function db_cacheStream (video, type, progress) {
 							return pumpCached();
 						});
 					}
-				};
+				});
 				function pumpDownload () {
 					return downloadStream.then(function(stream) {
 		
