@@ -4723,6 +4723,9 @@ function onKeyDown (keyEvent) {
 			onControlMute();
 			I("volumeSlider").parentElement.setAttribute("interacting", "");
 			break;
+		case "/":
+			I("searchField").focus();
+			break;
 		default:
 			if (keyEvent.keyCode >= 48 && keyEvent.keyCode <= 57)
 				md_updateTime(md_totalTime * (keyEvent.keyCode-48)/10);
