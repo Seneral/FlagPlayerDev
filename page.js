@@ -700,18 +700,12 @@ function ct_cacheVideo(video) {
 	var videoID = video.videoID;
 	var notID = 'cache-' + videoID;
 	var abort = false;
-	var interrupted = false;
 	var type = "normal"; // "normal" - normal is better but uses more cors server resources as all cached audio is directed over it
 	ui_setNotification(notID, "Caching " + videoID + "...").notOnClose = function() { abort = true; };
 	db_cacheStream(video, type, function(bytesReceived, bytesTotal) {
 		// Not called if type == opaque
-		if (interrupted) { console.log("Acting on interruption!"); return 0; }
 		if (abort) return false;
-		var not = ui_setNotification(notID, "Caching " + videoID + ": " + ui_shortenBytes(bytesReceived) + "/" + ui_shortenBytes(bytesTotal) +
-		'<button>Interrupt Caching</button>');
-		not.notContent.children[0].onclick = function() { 
-			not.notClose(); abort = false; interrupted = true; 
-			console.log("Interrupting caching process at " +bytesReceived + " bytes received!"); };
+		ui_setNotification(notID, "Caching " + videoID + ": " + ui_shortenBytes(bytesReceived) + "/" + ui_shortenBytes(bytesTotal));
 		return true;
 	}).then(function(cache) { 
 		var not = ui_setNotification(notID, "Caching " + videoID + ": " + (cache.size? ui_shortenBytes(cache.size) : "Done, unknown size") + " - " +
@@ -724,6 +718,7 @@ function ct_cacheVideo(video) {
 		if (!abort) ui_setNotification(notID, "Caching " + videoID + ": " + (e?.message  || "Unknown Error"));
 	});
 }
+
 
 /* -------------------- */
 /* ---- PLAYLIST ------	*/
@@ -1596,12 +1591,12 @@ function db_cacheStream (video, type, progress) {
 	if (exCache)
 		console.log("Found existing cache information of itag " + exCache.itag + ", downloaded " + exCache.progress + "/" + exCache.size);
 
-	var updateCache = function(mediaCache, status) {
-		return db_access().then(function() {
-			return new Promise (function(resolve, reject) {
+	var updateCache = function (mediaCache, status) {
+		return db_access().then(function () {
+			return new Promise (function (resolve, reject) {
 				var dbVideos = db_database.transaction("videos", "readwrite").objectStore("videos");
 				var getVidReq = dbVideos.get(cacheID);
-				getVidReq.onsuccess = function(e) {
+				getVidReq.onsuccess = function (e) {
 					var cachedVideo = e.target.result || db_videoAsCache(video);
 					if (mediaCache.size == 0)
 						mediaCache.status = "opaque";
@@ -1611,15 +1606,15 @@ function db_cacheStream (video, type, progress) {
 						mediaCache.status = "complete";
 					cachedVideo.cache = mediaCache;
 					var setVidReq = dbVideos.put(cachedVideo);
-					setVidReq.onsuccess = function() {
+					setVidReq.onsuccess = function () {
 						resolve(mediaCache);
 					};
-					setVidReq.onerror = function(err) {
+					setVidReq.onerror = function (err) {
 						reject({ message: "Database error: " + err });
 					};
 					db_requestPersistence();
 				};
-				getVidReq.onerror = function(err) {
+				getVidReq.onerror = function (err) {
 					reject({ message: "Database error: " + err });
 				};
 			});
@@ -1630,13 +1625,13 @@ function db_cacheStream (video, type, progress) {
 
 	if (type == "opaque") {
 		return fetch(stream.url, { headers: { "range": "bytes=0-" }, mode: "no-cors", signal: downloadController.signal })
-		.then(function(response) {
+		.then(function (response) {
 			assert(response.type == "opaque");
 			cacheObj.size = undefined;
 			cacheObj.progress = undefined;
 			// Add to cache
 			var cacheWrite = window.caches.open("flagplayer-media")
-			.then(function(cache) {
+			.then(function (cache) {
 				return cache.put(cacheObj.url, response);
 			})
 			.catch(() => {
@@ -1644,7 +1639,7 @@ function db_cacheStream (video, type, progress) {
 				throw "download"; // Error here is equal to aborted
 			});
 			// TODO: Finish progress watch to be able to abort
-			var progressWatch = new Promise(async function(resolve, reject) {
+			var progressWatch = new Promise(async function (resolve, reject) {
 				while (true) {
 					if (download.status != "pending") return resolve();
 					if (progress && !progress(cacheObj.progress, cacheObj.size)) {
@@ -1655,7 +1650,7 @@ function db_cacheStream (video, type, progress) {
 				}
 			});
 			return Promise.all([cacheWrite, progressWatch])
-			.catch(function(status) {
+			.catch(function (status) {
 				if (status == "download")
 					throw { message: "Opaque download/cache failed!" };
 				if (status == "aborted")
@@ -1670,7 +1665,7 @@ function db_cacheStream (video, type, progress) {
 		if (startByte) {
 			console.log("Decided to continue downloading from byte " + startByte + "/" + exCache.size);	
 			startStream = fetch(exCache.url)
-			.then(function(response) {
+			.then(function (response) {
 				if (response.type == "opaque")
 					throw "Conflicting information, cache stream is opaque";
 				return response.body;
@@ -1678,7 +1673,7 @@ function db_cacheStream (video, type, progress) {
 		}
 		else
 		{ // Dummy stream that can be read from once
-			startStream = new Promise (function(resolve) {
+			startStream = new Promise (function (resolve) {
 				resolve(new ReadableStream({
 					start(controller) {
 						controller.close();
@@ -1689,7 +1684,7 @@ function db_cacheStream (video, type, progress) {
 		
 		var downloadStream = fetch(ct_pref.corsAPIHost + stream.url, 
 			{ headers: { "range": "bytes=" + startByte + "-" }, signal: downloadController.signal })
-		.then(function(response) {
+		.then(function (response) {
 			if (response.type == "opaque")
 				return Promise.reject({ message: "Conflicting information, downloaded stream is opaque" });
 			if (!response.ok)
@@ -1725,7 +1720,7 @@ function db_cacheStream (video, type, progress) {
 						var dataStreams = streams[1].tee();
 						
 						// Add to cache
-						var downloader = new Promise(function(resolve, reject) {
+						var downloader = new Promise(function (resolve, reject) {
 							const downloadReader = dataStreams[0].getReader();
 							return pump();
 							function pump() {
@@ -1741,14 +1736,14 @@ function db_cacheStream (video, type, progress) {
 							throw e;
 						});
 
-						var progressWatch = new Promise(async function(resolve, reject) {
+						var progressWatch = new Promise(async function (resolve, reject) {
 							const reader = dataStreams[1].getReader();
 							while (true) {
 								const result = await reader.read();
 								if (result.done) return resolve("success");
 								cacheObj.progress += result.value.length;
 								updateCache(cacheObj, "downloading")
-								.catch(function(status) {
+								.catch(function (status) {
 									console.error("Couldn't update cache!");
 								});
 								if (progress) {
@@ -1768,7 +1763,7 @@ function db_cacheStream (video, type, progress) {
 				
 						return Promise.all([downloader, progressWatch])
 						.then(res => res[1]) // Only care about output from progressWatch
-						.catch(function(status) {
+						.catch(function (status) {
 							if (status == "aborted")
 								throw { message: "Aborted!" };
 							return status; // cache
@@ -1783,7 +1778,7 @@ function db_cacheStream (video, type, progress) {
 		})
 		.then(function (cacheStream) {
 			return window.caches.open("flagplayer-media")
-			.then(function(cache) {
+			.then(function (cache) {
 				return cache.put(cacheObj.url, new Response(cacheStream, {
 					status: 200,
 					headers: {
@@ -1802,12 +1797,12 @@ function db_cacheStream (video, type, progress) {
 }
 function db_deleteCachedStream (cacheID) {
 	return window.caches.open("flagplayer-media")
-	.then (function(cache) {
+	.then (function (cache) {
 		var cacheWrite = cache.delete(VIRT_CACHE + cacheID);
-		var databaseWrite = db_access().then(function() {
+		var databaseWrite = db_access().then(function () {
 			var dbVideos = db_database.transaction("videos", "readwrite").objectStore("videos");
-			return new Promise (function(resolve, reject) {
-				dbVideos.get(cacheID).onsuccess = function(e) {
+			return new Promise (function (resolve, reject) {
+				dbVideos.get(cacheID).onsuccess = function (e) {
 					e.target.result.cache = undefined;
 					if (yt_video && yt_video.videoID == cacheID) yt_video.mediaCache = undefined;
 					dbVideos.put(e.target.result).onsuccess = resolve;
@@ -4864,7 +4859,7 @@ function onKeyDown (keyEvent) {
 		case " ": case "k":
 			ct_mediaPlayPause(!md_paused, true);
 			break;
-		case "Left": case "ArrowLeft": case "j": 
+		case "Left": case "ArrowLeft": case "j":
 			ct_beginSeeking();
 			md_updateTime(md_curTime - 5);
 			break;
