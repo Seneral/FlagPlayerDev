@@ -1792,7 +1792,7 @@ function db_cacheStream (video, type, progress) {
 		.catch((e) => {
 			console.error ("Complete cache error: ", e);
 			throw e;
-		};
+		});
 	}
 }
 function db_deleteCachedStream (cacheID) {
