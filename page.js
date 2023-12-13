@@ -700,21 +700,30 @@ function ct_cacheVideo(video) {
 	var videoID = video.videoID;
 	var notID = 'cache-' + videoID;
 	var abort = false;
+	var interrupted = false;
+	var type = "normal"; // "normal" - normal is better but uses more cors server resources as all cached audio is directed over it
 	ui_setNotification(notID, "Caching " + videoID + "...").notOnClose = function() { abort = true; };
-	db_cacheStream(video, function(bytesReceived, bytesTotal) {
+	db_cacheStream(video, type, function(bytesReceived, bytesTotal) {
+		// Not called if type == opaque
+		if (interrupted) { console.log("Acting on interruption!"); return 0; }
 		if (abort) return false;
-		ui_setNotification(notID, 'Caching ' + videoID + ': ' + ui_shortenBytes(bytesReceived) + '/' + ui_shortenBytes(bytesTotal) + '');
+		var not = ui_setNotification(notID, "Caching " + videoID + ": " + ui_shortenBytes(bytesReceived) + "/" + ui_shortenBytes(bytesTotal) +
+		'<button>Interrupt Caching</button>');
+		not.notContent.children[0].onclick = function() { 
+			not.notClose(); abort = false; interrupted = true; 
+			console.log("Interrupting caching process at " +bytesReceived + " bytes received!"); };
 		return true;
 	}).then(function(cache) { 
-		var not = ui_setNotification(notID, 'Caching ' + videoID + ': ' + ui_shortenBytes(cache.size) + ' - ' +
-			'<button id="seeCacheButton">View Cache</button>', 3000);
-		not.notContent.children[0].onclick = function () { not.notClose(); ct_navCache(); };
+		var not = ui_setNotification(notID, "Caching " + videoID + ": " + (cache.size? ui_shortenBytes(cache.size) : "Done, unknown size") + " - " +
+			'<button>View Cache</button>', 3000);
+		not.notContent.children[0].onclick = function() { not.notClose(); ct_navCache(); };
 		video.cache = cache;
 		// In case current view is cache, update the view
 		db_getCachedVideos().then(ui_setupCache);
 	}).catch(function(e) {
-		if (!abort) ui_setNotification(notID, 'Caching ' + videoID + ': Error: ' + (e? e.message : "unknown"));
+		if (!abort) ui_setNotification(notID, "Caching " + videoID + ": " + (e?.message  || "Unknown Error"));
 	});
+}
 }
 
 
@@ -1474,27 +1483,27 @@ function db_cacheThumbnails(thumbs) {
 			+ (cacheThumbFail > 0? (" - " + cacheThumbFail + " failed") : ""), 3000);
 	});
 }
-function db_currentVideoAsCache() {
-	if (yt_video == undefined)
+function db_videoAsCache(video) {
+	if (video == undefined)
 		return undefined;
 	return {
-		title: yt_video.meta.title, 
-		videoID: yt_video.videoID, 
-		length: yt_video.meta.length, 
-		thumbnailURL: yt_video.meta.thumbnailURL, 
+		title: video.meta.title, 
+		videoID: video.videoID, 
+		length: video.meta.length, 
+		thumbnailURL: video.meta.thumbnailURL, 
 		addedDate: new Date(), 
-		uploadedDate: yt_video.meta.uploadedDate, 
+		uploadedDate: video.meta.uploadedDate, 
 		uploader: {
-			name: yt_video.meta.uploader.name,
-			channelID: yt_video.meta.uploader.channelID,
-			url: yt_video.meta.uploader.url,
+			name: video.meta.uploader.name,
+			channelID: video.meta.uploader.channelID,
+			url: video.meta.uploader.url,
 		}, 
-		views: yt_video.meta.views, 
-		likes: yt_video.meta.likes, 
-		dislikes: yt_video.meta.dislikes, 
-		comments: yt_video.comments.count, // only works on mobile, or when comments are loaded on desktop 
+		views: video.meta.views, 
+		likes: video.meta.likes, 
+		dislikes: video.meta.dislikes, 
+		comments: video.comments.count, // only works on mobile, or when comments are loaded on desktop 
 		tags: "", // Got none of that
-		categoryID: yt_video.meta.category,
+		categoryID: video.meta.category,
 	};
 }
 function db_getStoredVideos () {
@@ -1560,89 +1569,244 @@ function db_getCachedVideos () {
 		});
 	});
 }
-function db_cacheStream (video, progress) {
+function db_cacheStream (video, type, progress) {
 	if (!video.ready) return Promise.reject({ message: "Video not ready!" });
 	if (!("serviceWorker" in navigator) || !sw_current) return Promise.reject({ message: "No Service Worker - reload!"});
 
+	var exCache = video.mediaCache;
+	if (exCache && exCache.quality >= ct_pref.cacheAudioQuality && exCache.status == "complete")
+		return Promise.resolve(exCache); // Existing complete cache of same or equal quality, except for opaque caches (size==0) that might be wrong
+
+	// Select first stream at or below bitrate, or continue existing stream
+	var streamSelection = md_selectableStreams(video, true).dashAudio;
+	var stream = undefined;
+	if (exCache && exCache.quality == ct_pref.cacheAudioQuality)
+		stream = streamSelection.find(s => s.itag == exCache.itag); // Continue caching
+	if (!stream) stream = md_selectStream(streamSelection, ct_pref.cacheAudioQuality, md_daVal);
+	var startByte = 0;
+	if (exCache?.itag == stream.itag) startByte = exCache.progress;
+
 	var cacheID = video.videoID;
-	// Select first stream at or below bitrate
-	var stream = md_selectStream(md_selectableStreams(video, true).dashAudio, ct_pref.cacheAudioQuality, md_daVal);
 	var cacheObj = { 
 		url: VIRT_CACHE + cacheID,
 		quality: stream.aBR,
 		itag: stream.itag,
 	};
-	var controller = new AbortController();
 
-	return fetch(ct_pref.corsAPIHost + stream.url, { headers: { "range": "bytes=0-" }, signal: controller.signal })
-	.then(function(response) {
-		if (!response.ok)
-			return Promise.reject(new NetworkError(response));
+	console.log("Planning to download itag " + stream.itag);
+	if (exCache)
+		console.log("Found existing cache information of itag " + exCache.itag + ", downloaded " + exCache.progress + "/" + exCache.size);
 
-		cacheObj.size = parseInt(response.headers.get("content-length"));
-		cacheObj.progress = 0;
-		if (progress && !progress(cacheObj.progress, cacheObj.size)) {
-			controller.abort();
-			return Promise.reject({ message: "Aborted!" });
+	var updateCache = function(mediaCache, status) {
+		return db_access().then(function() {
+			return new Promise (function(resolve, reject) {
+				var dbVideos = db_database.transaction("videos", "readwrite").objectStore("videos");
+				var getVidReq = dbVideos.get(cacheID);
+				getVidReq.onsuccess = function(e) {
+					var cachedVideo = e.target.result || db_videoAsCache(video);
+					cachedVideo.cache = mediaCache;
+					var setVidReq = dbVideos.put(cachedVideo);
+					setVidReq.onsuccess = function() {
+						if (mediaCache.size == 0) {
+							mediaCache.status = "opaque";
+							resolve(mediaCache);
+						}
+						if (mediaCache.progress < mediaCache.size) {
+							mediaCache.status = "partial" + (status? " - " + status : "");
+							reject(mediaCache);
+						}
+						if (mediaCache.progress == mediaCache.size) {
+							mediaCache.status = "complete";
+							resolve(mediaCache);
+						}
+					};
+					setVidReq.onerror = function(err) {
+						reject({ message: "Database error: " + err });
+					};
+					db_requestPersistence();
+				};
+				getVidReq.onerror = function(err) {
+					reject({ message: "Database error: " + err });
+				};
+			});
+		})
+	};
+
+	var downloadController = new AbortController();
+
+	if (type == "opaque") {
+		return fetch(stream.url, { headers: { "range": "bytes=0-" }, mode: "no-cors", signal: downloadController.signal })
+		.then(function(response) {
+			assert(response.type == "opaque");
+			cacheObj.size = undefined;
+			cacheObj.progress = undefined;
+			// Add to cache
+			var cacheWrite = window.caches.open("flagplayer-media")
+			.then(function(cache) {
+				return cache.put(cacheObj.url, response);
+			})
+			.catch(() => {
+				downloadController.abort();
+				throw "download"; // Error here is equal to aborted
+			});
+			// TODO: Finish progress watch to be able to abort
+			var progressWatch = new Promise(async function(resolve, reject) {
+				while (true) {
+					if (download.status != "pending") return resolve();
+					if (progress && !progress(cacheObj.progress, cacheObj.size)) {
+						downloadController.abort();
+						return reject("aborted");
+					}
+					
+				}
+			});
+			return Promise.all([cacheWrite, progressWatch])
+			.catch(function(status) {
+				if (status == "download")
+					throw { message: "Opaque download/cache failed!" };
+				if (status == "aborted")
+					throw { message: "Aborted!" };
+				// Nothing else should happen
+			})
+			.then(() => updateCache(cacheObj));
+		});
+	} else {
+
+		var startStream;		
+		if (startByte) {
+			console.log("Decided to continue downloading from byte " + startByte + "/" + exCache.size);	
+			startStream = fetch(exCache.url)
+			.then(function(response) {
+				if (response.type == "opaque")
+					throw "Conflicting information, cache stream is opaque";
+				return response.body;
+			});
 		}
-
-		// Split stream to cache and progress streams
-		var dataStreams = response.body.tee();
+		else
+		{ // Dummy stream that can be read from once
+			startStream = new Promise (function() {
+				return new ReadableStream({
+					start(controller) {
+						controller.close();
+					}
+				});
+			});
+		}
 		
-		// Add to cache
-		var cacheWrite = window.caches.open("flagplayer-media")
+		var downloadStream = fetch(ct_pref.corsAPIHost + stream.url, 
+			{ headers: { "range": "bytes=" + startByte + "-" }, signal: downloadController.signal })
+		.then(function(response) {
+			if (response.type != "opaque")
+				return Promise.reject({ message: "Conflicting information, downloaded stream is opaque" });
+			if (!response.ok)
+				return Promise.reject(new NetworkError(response));
+	
+			cacheObj.size = parseInt(response.headers.get("content-length"));
+			cacheObj.progress = startByte;
+			if (progress && !progress(cacheObj.progress, cacheObj.size)) {
+				downloadController.abort();
+				return Promise.reject({ message: "Aborted!" });
+			}
+	
+			// Split stream to cache and progress streams
+			return response.body;
+		});
+			
+
+		var cacheStream = new ReadableStream({
+			start(controller) {
+				const reader = startStream.getReader();
+				return pumpCached();
+				function pumpCached () {
+					return reader.read().then(({ done, value }) => {
+						if (done) return pumpDownload();
+						controller.enqueue(value);
+						return pumpCached();
+					});
+				}
+				function pumpDownload () {
+					return downloadStream.then(function(stream) {
+		
+						// Split stream to cache and progress streams
+						var dataStreams = stream.tee();
+						
+						// Add to cache
+						var downloader = new Promise(function(resolve, reject) {
+							const downloadReader = dataStreams[0].getReader();
+							return pump();
+							function pump() {
+								return downloadReader.read().then(({ done, value }) => {
+									if (done) return resolve();
+									controller.enqueue(value);
+									return pump();
+								});
+							}
+						}).catch((e) => {
+							console.error("Downloader error: ", e);
+							downloadController.abort();
+							throw e;
+						});
+
+						var progressWatch = new Promise(async function(resolve, reject) {
+							const reader = dataStreams[1].getReader();
+							while (true) {
+								const result = await reader.read();
+								if (result.done) return resolve("success");
+								cacheObj.progress += result.value.length;
+								updateCache(cacheObj, "downloading");
+								if (progress) {
+									var status = progress(cacheObj.progress, cacheObj.size);
+									if (status === false) {
+										downloadController.abort();
+										return reject("aborted");
+									}
+									if (status === 0) {
+										console.log("Interrupted, simulating cache/network error!");
+										downloadController.abort();
+										return reject("cache");
+									}
+								}
+							}
+						});
+				
+						return Promise.all([downloader, progressWatch])
+						.then(res => res[1]) // Only care about output from progressWatch
+						.catch(function(status) {
+							if (status == "aborted")
+								throw { message: "Aborted!" };
+							return status; // cache
+						})
+						.then((status) => updateCache(cacheObj, status));
+					});
+				}
+			},
+		});
+
+		// Write concatenated cache and download stream to cache
+		return window.caches.open("flagplayer-media")
 		.then(function(cache) {
-			return cache.put(cacheObj.url, new Response(dataStreams[0], {
+			return cache.put(cacheObj.url, new Response(cacheStream, {
 				status: 200,
 				headers: {
 					"content-length": response.headers.get("content-length"),
 					"content-type": response.headers.get("content-type"),
 				},
 			}));
-		});
-
-		var progressWatch = new Promise(async function(resolve, reject) {
-			const reader = dataStreams[1].getReader();
-			while (true) {
-				const result = await reader.read();
-				if (result.done) return resolve();
-				cacheObj.progress += result.value.length;
-				if (progress && !progress(cacheObj.progress, cacheObj.size)) {
-					controller.abort();
-					return reject({});
-				}
-			}
-		});
-
-		return Promise.all([cacheWrite, progressWatch])
-		.then(() => true)
-		.catch(function(err) {
-			console.error(err);
 		})
-		.then(function(success) {
-			db_access().then(function() {
-				var dbVideos = db_database.transaction("videos", "readwrite").objectStore("videos");
-				return new Promise (function (resolve, reject) {
-					dbVideos.get(cacheID).onsuccess = function (e) {
-						var cachedVideo = e.target.result || db_currentVideoAsCache();
-						cachedVideo.cache = cacheObj;
-						dbVideos.put(cachedVideo).onsuccess = function () { resolve(cacheObj); };
-						db_requestPersistence();
-					};
-				});
-			})
-			
-		})
-	});
+		.catch((e) => {
+			console.error ("Complete cache error: ", e);
+			throw e;
+		});
+	}
 }
 function db_deleteCachedStream (cacheID) {
 	return window.caches.open("flagplayer-media")
-	.then (function (cache) {
+	.then (function(cache) {
 		var cacheWrite = cache.delete(VIRT_CACHE + cacheID);
-		var databaseWrite = db_access().then(function () {
+		var databaseWrite = db_access().then(function() {
 			var dbVideos = db_database.transaction("videos", "readwrite").objectStore("videos");
-			return new Promise (function (resolve, reject) {
-				dbVideos.get(cacheID).onsuccess = function (e) {
+			return new Promise (function(resolve, reject) {
+				dbVideos.get(cacheID).onsuccess = function(e) {
 					e.target.result.cache = undefined;
 					if (yt_video && yt_video.videoID == cacheID) yt_video.mediaCache = undefined;
 					dbVideos.put(e.target.result).onsuccess = resolve;
@@ -4413,10 +4577,11 @@ function onSettingsChange (hint) {
 	switch (hint) {
 		case "CH":
 			ct_pref.corsAPIHost = I("st_corsHost").value;
-			if (!ct_pref.corsAPIHost.endsWith('/')) {
+			if (!ct_pref.corsAPIHost)
+				ct_pref.corsAPIHost = HOST_CORS;
+			if (!ct_pref.corsAPIHost.endsWith('/'))
 				ct_pref.corsAPIHost += '/';
-				I("st_corsHost").value += '/';
-			}
+			I("st_corsHost").value = ct_pref.corsAPIHost;
 			break;
 		case "FV":
 			ct_pref.filterHideCompletely = I("st_filter_hide").checked;
