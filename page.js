@@ -724,8 +724,6 @@ function ct_cacheVideo(video) {
 		if (!abort) ui_setNotification(notID, "Caching " + videoID + ": " + (e?.message  || "Unknown Error"));
 	});
 }
-}
-
 
 /* -------------------- */
 /* ---- PLAYLIST ------	*/
@@ -1711,19 +1709,21 @@ function db_cacheStream (video, type, progress) {
 			// Split stream to cache and progress streams
 			return response.body;
 		});
-			
+
 
 		var cacheStream = new ReadableStream({
 			start(controller) {
-				const reader = startStream.getReader();
-				return pumpCached();
-				function pumpCached () {
-					return reader.read().then(({ done, value }) => {
-						if (done) return pumpDownload();
-						controller.enqueue(value);
-						return pumpCached();
-					});
-				}
+				return startStream.then(function(stream) {
+					const reader = stream.getReader();
+					return pumpCached();
+					function pumpCached () {
+						return reader.read().then(({ done, value }) => {
+							if (done) return pumpDownload();
+							controller.enqueue(value);
+							return pumpCached();
+						});
+					}
+				};
 				function pumpDownload () {
 					return downloadStream.then(function(stream) {
 		
@@ -1751,8 +1751,8 @@ function db_cacheStream (video, type, progress) {
 							const reader = dataStreams[1].getReader();
 							while (true) {
 								const result = await reader.read();
-								if (result.done) return resolve("success");
 								cacheObj.progress += result.value.length;
+								if (result.done) return resolve("success");
 								updateCache(cacheObj, "downloading");
 								if (progress) {
 									var status = progress(cacheObj.progress, cacheObj.size);
