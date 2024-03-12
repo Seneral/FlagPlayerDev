@@ -2048,7 +2048,8 @@ function yt_parseNum (numText) {
 }
 function yt_selectThumbnail (thumbnails) {
 	if (!Array.isArray(thumbnails))
-	thumbnails = thumbnails.thumbnails;
+	thumbnails = thumbnails?.thumbnails;
+	if (!thumbnails) return "";
 	var url = (thumbnails || []).sort(function(t1, t2) { return t1.height > t2.height? -1 : 1 })[0]?.url || "";
 	if (url.startsWith("//"))
 		return "https:" + url;
@@ -2212,7 +2213,7 @@ function yt_extractPlaylistData(playlist, initialData) {
 	playlist.count = yt_parseNum(yt_parseLabel(prim?.stats.find(s => yt_parseLabel(s).includes("videos"))));
 	playlist.description = yt_parseText(yt_parseLabel(prim?.descriptionText || prim?.description));
 	playlist.thumbnailURL = prim?.thumbnailRenderer? 
-		yt_selectThumbnail(prim?.thumbnailRenderer.playlistVideoThumbnailRenderer.thumbnail)
+		yt_selectThumbnail(prim?.thumbnailRenderer.playlistVideoThumbnailRenderer?.thumbnail)
 		: HOST_YT_IMG + playlist.videos[0].videoID + '/default.jpg';
 }
 function yt_parsePlaylistVideos(itemList) {
@@ -2329,7 +2330,7 @@ function yt_parseSearchResults(itemList) {
 				count: yt_parseNum(yt_parseLabel(p.videoCountText)),
 //				views: yt_parseNum(yt_parseLabel(p.viewCountText)),
 //				updatedTimeAgoText: yt_parseLabel(p.publishedTimeText),
-				thumbnailURL: yt_selectThumbnail(p.thumbnail || p.thumbnailRenderer.playlistVideoThumbnailRenderer?.thumbnail || p.thumbnailRenderer.playlistCustomThumbnailRenderer?.thumbnail),
+				thumbnailURL: yt_selectThumbnail(p.thumbnail || p.thumbnailRenderer?.playlistVideoThumbnailRenderer?.thumbnail || p.thumbnailRenderer?.playlistCustomThumbnailRenderer?.thumbnail),
 				author: {
 					name: yt_parseLabel(p.ownerText || p.shortBylineText),
 					channelID: u?.browseEndpoint?.browseId,
@@ -2377,8 +2378,9 @@ function yt_extractChannelMetadata(initialData) {
 		meta.bannerImg = header.banner? yt_selectThumbnail(header.banner) : undefined;
 		meta.url = header.navigationEndpoint.browseEndpoint.canonicalBaseUrl;
 		meta.subscribers = yt_parseNum(yt_parseLabel(header.subscriberCountText));
-		var chLinks = header.headerLinks? (header.headerLinks.channelHeaderLinksRenderer.primaryLinks || []).concat(header.headerLinks.channelHeaderLinksRenderer.secondaryLinks || []) : [];
-		meta.links = chLinks.map(l => { return { title: l.title.simpleText, icon: l.icon? yt_selectThumbnail(l.icon) : undefined, link: l.navigationEndpoint.urlEndpoint.url }; });
+		// TODO: Broken since now hidden behind an endpoint
+		var chLinks = (header.headerLinks?.channelHeaderLinksRenderer?.primaryLinks || []).concat(header.headerLinks?.channelHeaderLinksRenderer?.secondaryLinks || []);
+		meta.links = chLinks.map(l => { return { title: yt_parseLabel(l.title), icon: yt_selectThumbnail(l.icon), link: l.navigationEndpoint?.urlEndpoint?.url }; });
 	} catch (e) { console.error("Failed to extract channel metadata!", e, initialData); }
 
 	try { // Extract secondary metadata
@@ -3871,10 +3873,13 @@ function ui_setChannelMetadata () {
 	if (yt_channel.meta.bannerImg) {
 		I("chBannerImg").src = yt_channel.meta.bannerImg;
 		sec_banner.style.display = "block";
-		var linkContainer = I("chLinkBar");
-		for(var i = 0; i < yt_channel.meta.links.length; i++) {
-			var link = yt_channel.meta.links[i];
-			ht_appendChannelLinkElement(linkContainer, link.link, link.icon, link.title);
+		if (yt_channel.meta.links)
+		{
+			var linkContainer = I("chLinkBar");
+			for(var i = 0; i < yt_channel.meta.links.length; i++) {
+				var link = yt_channel.meta.links[i];
+				ht_appendChannelLinkElement(linkContainer, link.link, link.icon, link.title);
+			}
 		}
 	} else I("chBannerImg").removeAttribute("src");
 
