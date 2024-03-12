@@ -1055,8 +1055,10 @@ function ct_mediaError (error) {
 		});
 		ui_setNotification("vd-" + yt_videoID, 'Cache of ' + yt_videoID + ' is invalid, removed entry!', 5000);*/
 		console.error("Cached media file erroneous! Ignoring. ", error);
-		//yt_video.mediaCache = undefined;
+		yt_video.mediaCache = undefined;
 		md_resetStreams();
+		md_updateStreams();
+		ui_updateStreamState();
 		ui_setNotification("vd-" + yt_videoID, 'Cache of "' + (yt_video && yt_video.meta? yt_video.meta.title : "") + '"' + yt_videoID + ' seems to be invalid!', 5000);
 		return;
 	} else if (error instanceof PlaybackError && error.code == 4) {
