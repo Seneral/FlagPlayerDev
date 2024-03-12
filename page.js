@@ -3181,14 +3181,15 @@ function yt_decodeStreams (config) {
 			// Verify itag
 			var itag = s.itag;
 			if (itag == undefined) continue; // Yes these pop up recently
-			else if (ITAGS[itag] == undefined) {
-				console.error("Unknown stream ITag '" + itag + "'");
+			var itagTemplate = ITAGS[itag];
+			if (!itagTemplate) {
+				console.warn("Unknown stream ITag '" + itag + "'");
 				continue;
 			}
 
 			// ITag Data
-			stream.isLive = ITAGS[itag].hls || stream.url.includes("&live=1");
-			stream.isStereo = ITAGS[itag].ss3D || false;
+			stream.isLive = itagTemplate?.hls || stream.url.includes("&live=1");
+			stream.isStereo = itagTemplate?.ss3D || false;
 
 			// Format
 			if (s.mimeType || s.type) {
@@ -3200,9 +3201,10 @@ function yt_decodeStreams (config) {
 				stream.aCodec = mime[1] == "audio"? stream.codecs[0] : stream.codecs[1];
 			}
 			else {
-				stream.container = ITAGS[itag].ext;
-				stream.vCodec = ITAGS[itag].vCodec;
-				stream.aCodec = ITAGS[itag].aCodec;
+				if (!itagTemplate) continue;
+				stream.container = itagTemplate.ext;
+				stream.vCodec = itagTemplate.vCodec;
+				stream.aCodec = itagTemplate.aCodec;
 				stream.codecs = [];
 				if (stream.vCodec) stream.codecs.push (stream.vCodec);
 				if (stream.aCodec) stream.codecs.push (stream.aCodec);
@@ -3239,19 +3241,21 @@ function yt_decodeStreams (config) {
 					stream.vResY = s.height;
 				}
 				else {
-					stream.vResX = ITAGS[itag].x;
-					stream.vResY = ITAGS[itag].y;
+					if (!itagTemplate) continue;
+					stream.vResX = itagTemplate.x;
+					stream.vResY = itagTemplate.y;
 				}
 				stream.proj = s.projectionType;
 				if (s.fps) stream.vFPS = parseInt(s.fps);
-				else stream.vFPS = ITAGS[itag].fps || 30;
+				else stream.vFPS = itagTemplate?.fps || 30;
 			}
 
 			// Audio
 			if (stream.hasAudio) {
+				if (!itagTemplate) continue;
 				stream.aChannels = parseInt(s.audio_channels || s.audioChannels);
 				stream.aSR = parseInt(s.audio_sample_rate || s.audioSampleRate);
-				stream.aBR = ITAGS[itag].aBR;
+				stream.aBR = itagTemplate.aBR;
 			}
 
 			// Apply
