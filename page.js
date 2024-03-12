@@ -1662,13 +1662,15 @@ function db_cacheStream (video, type, progress) {
 		});
 	} else {
 
-		var startStream;		
+		console.warn("Downloading " + cacheObj.url + " with ex cache progress " + exCache?.progress);
+		var startStream;
 		if (startByte) {
 			console.log("Decided to continue downloading from byte " + startByte + "/" + exCache.size);	
 			startStream = fetch(exCache.url)
 			.then(function (response) {
 				if (response.type == "opaque")
 					throw "Conflicting information, cache stream is opaque";
+				console.warn("Got existing cache " + response + " with status " + response.status + "  and headers " + response.headers);
 				return response.body;
 			});
 		}
@@ -1711,6 +1713,7 @@ function db_cacheStream (video, type, progress) {
 					return pumpCached();
 					function pumpCached () {
 						return reader.read().then(({ done, value }) => {
+							console.warn("Got cached (done " + done + ") " + value);
 							if (done) return pumpDownload();
 							controller.enqueue(value);
 							return pumpCached();
@@ -1726,6 +1729,7 @@ function db_cacheStream (video, type, progress) {
 							return pump();
 							function pump() {
 								return downloadReader.read().then(({ done, value }) => {
+									console.warn("Got downloaded (done " + done + ") " + value);
 									if (done) return resolve();
 									controller.enqueue(value);
 									return pump();
@@ -1744,6 +1748,7 @@ function db_cacheStream (video, type, progress) {
 								return reader.read().then(({ done, value }) => {
 									if (done) return resolve("success");
 									cacheObj.progress += value.length;
+									console.warn("Progress watch got " + value.length + "bytes for a total of " + cacheObj.progress + " bytes, done flag " + done);
 									updateCache(cacheObj, "downloading")
 									.catch(function () {
 										console.error("Couldn't update cache!");
