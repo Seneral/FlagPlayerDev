@@ -1580,7 +1580,8 @@ function db_cacheStream (video, type, progress) {
 		stream = streamSelection.find(s => s.itag == exCache.itag); // Continue caching
 	if (!stream) stream = md_selectStream(streamSelection, ct_pref.cacheAudioQuality, md_daVal);
 	var startByte = 0;
-	if (exCache?.itag == stream.itag) startByte = exCache.progress;
+	//if (exCache?.itag == stream.itag) startByte = exCache.progress;
+	// TODO: Fix continuing cache, doesn't always work
 
 	var cacheID = video.videoID;
 	var cacheObj = { 
@@ -2054,7 +2055,7 @@ function yt_parseNum (numText) {
 function yt_selectThumbnail (thumbnails) {
 	if (!Array.isArray(thumbnails))
 	thumbnails = thumbnails?.thumbnails;
-	if (!thumbnails) return "";
+	if (!thumbnails) return undefined;
 	var url = (thumbnails || []).sort(function(t1, t2) { return t1.height > t2.height? -1 : 1 })[0]?.url || "";
 	if (url.startsWith("//"))
 		return "https:" + url;
@@ -2218,7 +2219,7 @@ function yt_extractPlaylistData(playlist, initialData) {
 	playlist.count = yt_parseNum(yt_parseLabel(prim?.stats.find(s => yt_parseLabel(s).includes("videos"))));
 	playlist.description = yt_parseText(yt_parseLabel(prim?.descriptionText || prim?.description));
 	playlist.thumbnailURL = prim?.thumbnailRenderer? 
-		yt_selectThumbnail(prim?.thumbnailRenderer.playlistVideoThumbnailRenderer?.thumbnail)
+		yt_selectThumbnail(prim.thumbnailRenderer.playlistVideoThumbnailRenderer?.thumbnail || prim.thumbnailRenderer.playlistCustomThumbnailRenderer?.thumbnail)
 		: HOST_YT_IMG + playlist.videos[0].videoID + '/default.jpg';
 }
 function yt_parsePlaylistVideos(itemList) {
@@ -3004,8 +3005,9 @@ function yt_extractVideoCommentObject (commentData, comments, response) {
 		try { // Extract comments
 			contents.forEach(function (c) {
 				var thread = c.commentThreadRenderer;
-				var comm = thread?.comment?.commentRenderer | c.commentRenderer;
-				if (!comm) return; // ContinuationItemRenderer
+				if (thread.commentViewModel) return; // loggingDirectives.enableDisplayloggerExperiment=true wtf?
+				var comm = thread?.comment?.commentRenderer || c.commentRenderer;
+				if (!comm) return; // probably ContinuationItemRenderer, expecting one at the end
 
 				try { // Only exact measurement on desktop
 					var likeCount = yt_parseNum(comm.actionButtons.commentActionButtonsRenderer.likeButton.toggleButtonRenderer.accessibilityData.accessibilityData.label);
@@ -4873,20 +4875,20 @@ function onKeyDown (keyEvent) {
 			ct_beginSeeking();
 			md_updateTime(md_curTime + 5);
 			break;
-		case "Up": case "ArrowUp": 
+		case "Up": case "ArrowUp":
 			md_updateVolume(md_pref.volume + 0.1);
 			ct_savePreferences();
 			I("volumeSlider").parentElement.setAttribute("interacting", "");
 			break
-		case "Down": case "ArrowDown": 
+		case "Down": case "ArrowDown":
 			md_updateVolume(md_pref.volume - 0.1);
 			ct_savePreferences();
 			I("volumeSlider").parentElement.setAttribute("interacting", "");
 			break;
-		case "f": 
+		case "f":
 			onToggleFullscreen();
 			break;
-		case "m": 
+		case "m":
 			onControlMute();
 			I("volumeSlider").parentElement.setAttribute("interacting", "");
 			break;
