@@ -1663,7 +1663,6 @@ function db_cacheStream (video, type, progress) {
 		});
 	} else {
 
-		console.warn("Downloading " + cacheObj.url + " with ex cache progress " + exCache?.progress);
 		var startStream;
 		if (startByte) {
 			console.log("Decided to continue downloading from byte " + startByte + "/" + exCache.size);	
@@ -1671,7 +1670,6 @@ function db_cacheStream (video, type, progress) {
 			.then(function (response) {
 				if (response.type == "opaque")
 					throw "Conflicting information, cache stream is opaque";
-				console.warn("Got existing cache " + response + " with status " + response.status + "  and headers " + response.headers);
 				return response.body;
 			});
 		}
@@ -1714,7 +1712,6 @@ function db_cacheStream (video, type, progress) {
 					return pumpCached();
 					function pumpCached () {
 						return reader.read().then(({ done, value }) => {
-							console.warn("Got cached (done " + done + ") " + value);
 							if (done) return pumpDownload();
 							controller.enqueue(value);
 							return pumpCached();
@@ -1730,7 +1727,6 @@ function db_cacheStream (video, type, progress) {
 							return pump();
 							function pump() {
 								return downloadReader.read().then(({ done, value }) => {
-									console.warn("Got downloaded (done " + done + ") " + value);
 									if (done) return resolve();
 									controller.enqueue(value);
 									return pump();
@@ -1749,7 +1745,6 @@ function db_cacheStream (video, type, progress) {
 								return reader.read().then(({ done, value }) => {
 									if (done) return resolve("success");
 									cacheObj.progress += value.length;
-									console.warn("Progress watch got " + value.length + "bytes for a total of " + cacheObj.progress + " bytes, done flag " + done);
 									updateCache(cacheObj, "downloading")
 									.catch(function () {
 										console.error("Couldn't update cache!");
@@ -3005,7 +3000,7 @@ function yt_extractVideoCommentObject (commentData, comments, response) {
 		try { // Extract comments
 			contents.forEach(function (c) {
 				var thread = c.commentThreadRenderer;
-				if (thread.commentViewModel) return; // loggingDirectives.enableDisplayloggerExperiment=true wtf?
+				if (thread?.commentViewModel) return; // loggingDirectives.enableDisplayloggerExperiment=true wtf?
 				var comm = thread?.comment?.commentRenderer || c.commentRenderer;
 				if (!comm) return; // probably ContinuationItemRenderer, expecting one at the end
 
@@ -3635,7 +3630,8 @@ function ui_setStreams () {
 	// Fill dropdowns with available values
 	var selectableStreams = md_selectableStreams(yt_video);
 	fillDropdown(I("select_dashVideo"), selectableStreams.dashVideo.map(function(s) { 
-		return { value: s.vResY*100+s.vFPS, label: s.vResY + "p" + (s.vFPS != 30? "" + s.vFPS : "") }; 
+		return { value: s.vResY*100+s.vFPS+(s.vBR||0)/1000000, 
+			label: s.vResY + "p" + (s.vFPS != 30? "" + s.vFPS : "") + " " + ui_shortenNumber(s.vBR, "gmk") + "bps"}; 
 	}));
 	fillDropdown(I("select_dashAudio"), selectableStreams.dashAudio.map(function(s) { 
 		return { value: s.aBR, label: s.aBR + "kbps" }; 
@@ -5634,11 +5630,11 @@ var ITAGS = {
 135: { x:  854, y:  480, ext:  "mp4", vCodec: "h264" },
 136: { x: 1280, y:  720, ext:  "mp4", vCodec: "h264" },
 137: { x: 1920, y: 1080, ext:  "mp4", vCodec: "h264" },
-138: { x: 4096, y: 2160, ext:  "mp4", vCodec: "h264" },
+138: { x: 3840, y: 2160, ext:  "mp4", vCodec: "h264" },
 160: { x:  256, y:  144, ext:  "mp4", vCodec: "h264" },
 212: { x:  854, y:  480, ext:  "mp4", vCodec: "h264" },
 264: { x: 2560, y: 1440, ext:  "mp4", vCodec: "h264" },
-266: { x: 4096, y: 2160, ext:  "mp4", vCodec: "h264" },
+266: { x: 3840, y: 2160, ext:  "mp4", vCodec: "h264" },
 167: { x:  640, y:  360, ext: "webm", vCodec:  "vp8" },
 168: { x:  854, y:  480, ext: "webm", vCodec:  "vp8" },
 169: { x: 1280, y:  720, ext: "webm", vCodec:  "vp8" },
@@ -5653,7 +5649,7 @@ var ITAGS = {
 247: { x: 1280, y:  720, ext: "webm", vCodec:  "vp9" },
 248: { x: 1920, y: 1080, ext: "webm", vCodec:  "vp9" },
 271: { x: 2560, y: 1440, ext: "webm", vCodec:  "vp9" },
-272: { x: 4096, y: 2160, ext: "webm", vCodec:  "vp9" }, // 3840x2160 (e.g. RtoitU2A-3E) or 7680x4320 (sLprVF6d7Ug)
+272: { x: 3840, y: 2160, ext: "webm", vCodec:  "vp9" }, // 3840x2160 (e.g. RtoitU2A-3E) or 7680x4320 (sLprVF6d7Ug)
 278: { x:  256, y:  144, ext: "webm", vCodec:  "vp9" },
 // 60fps
 298: { x: 1280, y:  720, ext:  "mp4", vCodec: "h264", fps: 60 },
@@ -5661,8 +5657,8 @@ var ITAGS = {
 302: { x: 1280, y:  720, ext: "webm", vCodec:  "vp9", fps: 60 },
 303: { x: 1920, y: 1080, ext: "webm", vCodec:  "vp9", fps: 60 },
 308: { x: 2560, y: 1440, ext: "webm", vCodec:  "vp9", fps: 60 },
-313: { x: 4096, y: 2160, ext: "webm", vCodec:  "vp9" },
-315: { x: 4096, y: 2160, ext: "webm", vCodec:  "vp9", fps: 60 },
+313: { x: 3840, y: 2160, ext: "webm", vCodec:  "vp9" },
+315: { x: 3840, y: 2160, ext: "webm", vCodec:  "vp9", fps: 60 },
 // 60fps + HDR
 330: { x:  256, y:  144, hdr: true, fps: 60 },
 331: { x:  426, y:  240, hdr: true, fps: 60 },
@@ -5671,7 +5667,18 @@ var ITAGS = {
 334: { x: 1280, y:  720, hdr: true, fps: 60 },
 335: { x: 1920, y: 1080, hdr: true, fps: 60 },
 336: { x: 2560, y: 1440, hdr: true, fps: 60 },
-337: { x: 4096, y: 2160, hdr: true, fps: 60 },
+337: { x: 3840, y: 2160, hdr: true, fps: 60 },
+// AV1
+394: { x:  256, y:  144, ext:  "mp4", vCodec: "av01.0.05M.08" },
+395: { x:  426, y:  240, ext:  "mp4", vCodec: "av01.0.05M.08" },
+396: { x:  640, y:  360, ext:  "mp4", vCodec: "av01.0.05M.08" },
+397: { x:  854, y:  480, ext:  "mp4", vCodec: "av01.0.05M.08" },
+398: { x: 1280, y:  720, ext:  "mp4", vCodec: "av01.0.05M.08" },
+399: { x: 1920, y: 1080, ext:  "mp4", vCodec: "av01.0.05M.08" },
+398: { x: 1280, y:  720, ext:  "mp4", vCodec: "av01.0.05M.08", fps: 60 },
+399: { x: 1920, y: 1080, ext:  "mp4", vCodec: "av01.0.05M.08", fps: 60 },
+400: { x: 2560, y: 1440, ext:  "mp4", vCodec: "av01.0.12M.08" },
+401: { x: 3840, y: 2160, ext:  "mp4", vCodec: "av01.0.12M.08" },
 
 // DASH Audio
 139: { ext:  "m4a", aCodec:    "aac", aBR:  48 },
@@ -5688,13 +5695,6 @@ var ITAGS = {
 325: { ext:  "m4a", aCodec:   "dtse" },
 328: { ext:  "m4a", aCodec:   "ec-3" },
 
-// Curious unknown formats
-394: { x:  256,  y:  144, vCodec: "av01.0.05M.08" },
-395: { x:  426,  y:  240, vCodec: "av01.0.05M.08" },
-396: { x:  640,  y:  360, vCodec: "av01.0.05M.08" },
-397: { x:  854,  y:  480, vCodec: "av01.0.05M.08" },
-398: { x: 1280,  y:  720, vCodec: "av01.0.05M.08" },
-399: { x: 1920,  y: 1080, vCodec: "av01.0.05M.08" },
 }
 
 var CATEGORIES = {
