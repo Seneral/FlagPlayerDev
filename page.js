@@ -2998,11 +2998,8 @@ function yt_extractVideoCommentObject (commentData, comments, response) {
 	if (contents.length > 0) {
 		try { // Extract comments
 			contents.forEach(function (c) {
-				var thread, comm;
-				if (c.commentThreadRenderer) {
-					thread = c.commentThreadRenderer;
-					comm = thread.comment.commentRenderer;
-				} else comm = c.commentRenderer;
+				var thread = c.commentThreadRenderer;
+				var comm = thread?.comment?.commentRenderer | c.commentRenderer;
 				if (!comm) return; // ContinuationItemRenderer
 
 				try { // Only exact measurement on desktop
@@ -5037,7 +5034,8 @@ function md_updateStreams ()  {
 	md_sources = {};
 	if (md_pref.dash) {
 		md_sources.video = selectedStreams.dashVideo? selectedStreams.dashVideo.url : '';
-		md_sources.audio = yt_video.mediaCache && (ct_pref.cacheForceUse || !ct_online)? yt_video.mediaCache.url 
+		md_sources.audio = yt_video.mediaCache && yt_video.mediaCache.status == "complete" && 
+			(ct_pref.cacheForceUse || !ct_online)? yt_video.mediaCache.url 
 			: (selectedStreams.dashAudio? selectedStreams.dashAudio.url
 					: (yt_video.mediaCache? yt_video.mediaCache.url : ''));
 	} else {
