@@ -354,6 +354,7 @@ function ct_loadPreferences () {
 	md_pref.dashVideo = G("prefDashVideo") || "72030"; // NONE - BEST - WORST - <Resolution*100+FPS>
 	md_pref.dashAudio = G("prefDashAudio") || "160"; // NONE - BEST - WORST - <Bitrate>
 	md_pref.dashContainer = G("prefDashContainer") || "webm"; // webm - mp4
+	md_pref.vCodec = G("prefCodec") || "vp"; // vp, avc, av01
 	md_pref.muted = G("prefMuted") == "true"? true : false;
 	md_pref.volume = G("prefVolume") != undefined? parseFloat(G("prefVolume")) : 1;
 	// Page Settings
@@ -391,6 +392,7 @@ function ct_savePreferences () {
 		S("prefDashVideo", md_pref.dashVideo);
 		S("prefDashAudio", md_pref.dashAudio);
 		S("prefDashContainer", md_pref.dashContainer);
+		S("prefCodec", md_pref.vCodec);
 	}
 	S("prefMuted", md_pref.muted);
 	S("prefVolume", md_pref.volume);
@@ -3356,14 +3358,11 @@ function ui_updateStreamState (selectedStreams) {
 	//I("legacyStreamToggle").checked = !md_pref.dash;
 	setDisplay("legacyStreamGroup", md_pref.dash? "none" : "");
 	setDisplay("dashStreamGroup", md_pref.dash? "" : "none");
-	I("select_dashContainer").value = md_pref.dashContainer;
+	I("select_codec").value = md_pref.vCodec;
 	if (selectedStreams) {
-		I("select_dashVideo").value = !selectedStreams.dashAudio? "NONE" : 
-			(isNaN(parseInt(md_pref.dashVideo))? md_pref.dashVideo : selectedStreams.dashVideo.vResY*100+selectedStreams.dashVideo.vFPS);
-		I("select_dashAudio").value = !selectedStreams.dashAudio? "NONE" : 
-			(isNaN(parseInt(md_pref.dashAudio))? md_pref.dashAudio: selectedStreams.dashAudio.aBR);
-		I("select_legacy").value = !selectedStreams.dashAudio? "NONE" : 
-			(isNaN(parseInt(md_pref.legacyVideo))? md_pref.legacyVideo : selectedStreams.legacyVideo.vResY);
+		I("select_dashVideo").value = selectedStreams.dashVideo? md_dvVal(selectedStreams.dashVideo) : "NONE";
+		I("select_dashAudio").value = selectedStreams.dashAudio? md_daVal(selectedStreams.dashAudio) : "NONE";
+		I("select_legacy").value = selectedStreams.dashAudio? md_dvVal(selectedStreams.legacyVideo) : "NONE";
 	} else if (yt_video && yt_video.ready) {
 		// Triggered by changes to selectableStreams (streams were deemed unavailable)
 		var dropdown = I("select_dashVideo");
@@ -3384,7 +3383,7 @@ function ui_updatePlayerState () {
 	setDisplay("endedIndicator", md_state == State.Ended? "block" : "none");
 	setDisplay("nextLoadIndicator", "none");
 	setDisplay("startPlayIndicator", md_state == State.PreStart? "block" : "none");
-	setDisplay("videoPoster", md_state == State.Started && md_sources.video? "none" : "block");
+	setDisplay("videoPoster", md_state == State.Started && md_sources?.video? "none" : "block");
 }
 function ui_updateFullscreenState () {
 	I("fullscreenButton").setAttribute("state", ct_temp.fullscreen? "on" : "off");
@@ -3630,14 +3629,13 @@ function ui_setStreams () {
 	// Fill dropdowns with available values
 	var selectableStreams = md_selectableStreams(yt_video);
 	fillDropdown(I("select_dashVideo"), selectableStreams.dashVideo.map(function(s) { 
-		return { value: s.vResY*100+s.vFPS+(s.vBR||0)/1000000, 
-			label: s.vResY + "p" + (s.vFPS != 30? "" + s.vFPS : "") + " " + ui_shortenNumber(s.vBR, "gmk") + "bps"}; 
+		return { value: md_dvVal(s), label: s.vResY + "p" + (s.vFPS != 30? "" + s.vFPS : "") }; 
 	}));
 	fillDropdown(I("select_dashAudio"), selectableStreams.dashAudio.map(function(s) { 
-		return { value: s.aBR, label: s.aBR + "kbps" }; 
+		return { value: md_daVal(s), label: s.aBR + "kbps" }; 
 	}));
 	fillDropdown(I("select_legacy"), selectableStreams.legacyVideo.map(function(s) { 
-		return { value: s.vResY, label: s.vResY + "p / " + s.aBR + "kbps" }; 
+		return { value: md_dvVal(s), label: s.vResY + "p / " + s.aBR + "kbps" }; 
 	}));
 }
 function ui_resetStreams () {
@@ -4481,7 +4479,7 @@ function ui_setupEventHandlers () {
 	I("plClose").onclick = ct_resetPlaylist;
 	// Options Panel
 	I("select_legacy").onchange = function () { onOptionsChange("ST"); };
-	I("select_dashContainer").onchange = function () { onOptionsChange("ST"); };
+	I("select_codec").onchange = function () { onOptionsChange("ST"); };
 	I("select_dashVideo").onchange = function () { onOptionsChange("ST"); };
 	I("select_dashAudio").onchange = function () { onOptionsChange("ST"); };
 	I("opt_loop").onchange = function () { onOptionsChange("LP"); };
@@ -4623,7 +4621,7 @@ function onOptionsChange (hint) {
 			md_pref.legacyVideo = I("select_legacy").value;
 			md_pref.dashVideo = I("select_dashVideo").value;
 			md_pref.dashAudio = I("select_dashAudio").value;
-			md_pref.dashContainer = I("select_dashContainer").value;
+			md_pref.vCodec = I("select_codec").value;
 			md_updateStreams();
 		case "LP":
 			ct_temp.loop = I("opt_loop").checked;
@@ -4962,8 +4960,8 @@ function onMediaTimeUpdate () {
 	// Prefer audio - it will advance when not viewed, video not
 	// And syncing video to audio is less noticeable than the other way around
 	if (md_state == State.Started && !md_flags.seeking) {
-		if (md_sources.audio) md_curTime = audioMedia.currentTime;
-		else if (md_sources.video) md_curTime = videoMedia.currentTime;
+		if (md_sources?.audio) md_curTime = audioMedia.currentTime;
+		else if (md_sources?.video) md_curTime = videoMedia.currentTime;
 		else md_curTime = 0;
 		ui_updateTimelineProgress();
 	}
@@ -4984,7 +4982,7 @@ function onMediaTimeUpdate () {
 /* -------------------- */
 
 // Assign value to streams for sorting: DashVideo DashAudio LegacyVideo
-function md_dvVal (s) { return (s.vResY * 100 + s.vFPS) * 2 + (s.container == md_pref.dashContainer? 1 : 0); }
+function md_dvVal (s) { return s.vResY * 100 + s.vFPS; }
 function md_daVal (s) { return s.aBR; }
 function md_lvVal (s) { return s.vResY; }
 
@@ -5003,20 +5001,42 @@ function md_selectableStreams (video, includeUnavailable = false) {
 		.sort((s1, s2) =>  md_daVal(s1) > md_daVal(s2)? -1 : 1);
 	return streams;
 }
-function md_selectStream (s, pref, value, sec) { // SECondary selector, f.E. container
+function md_selectStream (s, pref, value, selectPreferred) { // SECondary selector, f.E. container
 	if (pref == "NONE" || s.length == 0) return undefined;
 	if (s.length == 1) return s[0];
-	if (pref == "BEST") return s[0];
-	if (pref == "WORST") // Still select the preferred container
-		return sec && value(s[s.length-2]) == value(s[s.length-1])+1? s[s.length-2] : s[s.length-1];
-	return s.find(s1 => value(s1) <= (sec? parseInt(pref)*2+1 : parseInt(pref))) || s[s.length-1];
+	// Pick desired target quality
+	var target;
+	if (pref == "BEST") target = value(s[0]);
+	else if (pref == "WORST") target = value(s[s.length-1]);
+	else { // Find best quality equal or lower than preferred
+		target = parseInt(pref) || value(s[s.length-1]);
+		target = s.reduce(function (t, p) {
+			var val = value(p);
+			return val <= target && val > t? val : t;
+		}, 0);
+	}
+	// Select best matching
+	var match = s.filter(v => value(v) == target);
+	if (match.length == 1)
+		return match[0];
+	if (match.length > 1)
+		return selectPreferred? selectPreferred(match) : match[0];
+	console.error("Selected target quality " + target + " had no matching streams after all!");
+	return undefined;
 }
 function md_selectStreams (video) {
 	if (!video || !video.ready) return undefined;
 	// Return the selected stream in each category according to preferences
 	var allStreams = md_selectableStreams(video);
 	var streams = {};
-	streams.dashVideo = md_selectStream(allStreams.dashVideo, md_pref.dashVideo, md_dvVal, true);
+	// From selection, prefer matching codec
+	var selectPreferred = function(streams)
+	{
+		var best = streams.find(s => s.vCodec.includes(md_pref.vCodec));
+		if (!best) best = streams[0];
+		return best;
+	}
+	streams.dashVideo = md_selectStream(allStreams.dashVideo, md_pref.dashVideo, md_dvVal, selectPreferred);
 	streams.dashAudio = md_selectStream(allStreams.dashAudio, md_pref.dashAudio, md_daVal);
 	streams.legacyVideo = md_selectStream(allStreams.legacyVideo, md_pref.legacyVideo, md_lvVal);
 	console.log("MD: Selected Streams:", streams);
