@@ -3011,12 +3011,12 @@ function yt_extractVideoCommentObject (commentData, comments, response) {
 			id: comm.properties.commentId,
 			text: comm.properties.content?.content || "Parse Error",
 			likes: yt_parseNum(comm.toolbar?.likeCountNotliked), // Simplified only (e.g. 2k)
-			publishedTimeAgoText: yt_parseLabel(comm.properties.publishedTimeText),
+			publishedTimeAgoText: yt_parseLabel(comm.properties.publishedTime),
 		};
 		comment.author = { // If no authorText, YT failed to get author internally (+ default thumbnail) - looking comment up by ID retrieves author correctly
 			name: yt_parseLabel(comm.author?.displayName) || "[UNKNOWN AUTHOR]",
 			channelID: comm.author?.channelId,
-			url: comm.author?.channelCommand?.inntertubeCommand?.browseEndpoint?.canonicalBaseUrl,
+			url: comm.author?.channelCommand?.innertubeCommand?.browseEndpoint?.canonicalBaseUrl,
 			profileImg: yt_selectThumbnail(comm.author?.avatarThumbnailUrl),
 			isUploader: comm.author?.isCreator,
 		};
@@ -3024,7 +3024,7 @@ function yt_extractVideoCommentObject (commentData, comments, response) {
 			comment.replyData = { 
 				count: comm.toolbar.replyCount || 0,
 				continuation: undefined,
-				replies: comm.replyCount? [] : undefined,
+				replies: comm.toolbar.replyCount? [] : undefined,
 			};
 			if (thread.replies?.commentRepliesRenderer) {
 				var cont = thread.replies.commentRepliesRenderer.contents.extract(c => c.continuationItemRenderer);
