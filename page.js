@@ -2066,7 +2066,7 @@ function yt_parseDateText (dateText) {
 	if (euMatch) return new Date(parseInt(euMatch[3]), parseInt(euMatch[2])-1, parseInt(euMatch[1]));
 }
 function yt_parseLabel (label) {
-	return label?.runs?.reduce((t, r) => t += r.text, "") || label?.simpleText || label?.accessibility?.accessibilityData.label || "";
+	return label?.runs?.reduce((t, r) => t += r.text, "") || label?.simpleText || label?.accessibility?.accessibilityData.label || label || "";
 	// Used to prefer accessibility data since numbers were more detailed, but now, some accessibility texts are longer (e.g. title by uploader instead of title)
 }
 function yt_parseText (text) {
@@ -3014,10 +3014,10 @@ function yt_extractVideoCommentObject (commentData, comments, response) {
 			publishedTimeAgoText: yt_parseLabel(comm.properties.publishedTime),
 		};
 		comment.author = { // If no authorText, YT failed to get author internally (+ default thumbnail) - looking comment up by ID retrieves author correctly
-			name: yt_parseLabel(comm.author?.displayName) || "[UNKNOWN AUTHOR]",
+			name: comm.author?.displayName || "[UNKNOWN AUTHOR]",
 			channelID: comm.author?.channelId,
 			url: comm.author?.channelCommand?.innertubeCommand?.browseEndpoint?.canonicalBaseUrl,
-			profileImg: yt_selectThumbnail(comm.author?.avatarThumbnailUrl),
+			profileImg: comm.author?.avatarThumbnailUrl,
 			isUploader: comm.author?.isCreator,
 		};
 		if (thread) { // Main, first stage comment
