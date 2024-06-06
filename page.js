@@ -3002,7 +3002,7 @@ function yt_extractVideoCommentObject (commentData, comments, response) {
 	var commentDB = response.frameworkUpdates?.entityBatchUpdate?.mutations;
 	var parseNewComment = function(c) {
 		var thread = c.commentThreadRenderer;
-		var commView = thread.commentViewModel?.commentViewModel || c.commentViewModel;
+		var commView = thread?.commentViewModel?.commentViewModel || c.commentViewModel;
 		var commentKey = commView?.commentKey;
 		var commentStore = commentDB.find(c => c.entityKey == commentKey);
 		var comm = commentStore?.payload?.commentEntityPayload;
@@ -3087,11 +3087,11 @@ function yt_extractVideoCommentObject (commentData, comments, response) {
 		try { // Extract comments
 			contents.forEach(function (c) {
 				var comment;
-				if (c.commentThreadRenderer?.commentViewModel) 
+				if (c.commentThreadRenderer?.commentViewModel?.commentViewModel || c.commentViewModel) 
 				{ // New style of comment
 					comment = parseNewComment(c);
 				}
-				else
+				else if (c.commentThreadRenderer?.comment?.commentRenderer || c.commentRenderer)
 				{ // Old style of comment
 					comment = parseOldComment(c);
 				}
