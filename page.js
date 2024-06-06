@@ -3086,7 +3086,7 @@ function yt_extractVideoCommentObject (commentData, comments, response) {
 		try { // Extract comments
 			contents.forEach(function (c) {
 				var comment;
-				if (c.commentThreadRenderer?.thread?.commentViewModel) 
+				if (c.commentThreadRenderer?.commentViewModel) 
 				{ // New style of comment
 					comment = parseNewComment(c);
 				}
