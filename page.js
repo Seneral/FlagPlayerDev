@@ -3002,7 +3002,8 @@ function yt_extractVideoCommentObject (commentData, comments, response) {
 	var commentDB = response.frameworkUpdates?.entityBatchUpdate?.mutations;
 	var parseNewComment = function(c) {
 		var thread = c.commentThreadRenderer;
-		var commentKey = thread.commentViewModel?.commentViewModel?.commentKey;
+		var commView = thread.commentViewModel?.commentViewModel || c.commentViewModel;
+		var commentKey = commView?.commentKey;
 		var commentStore = commentDB.find(c => c.entityKey == commentKey);
 		var comm = commentStore?.payload?.commentEntityPayload;
 		if (!comm || !comm.properties) return null;
